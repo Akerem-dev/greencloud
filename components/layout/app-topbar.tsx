@@ -21,6 +21,7 @@ import {
   Wifi,
   type LucideIcon,
 } from "lucide-react";
+
 import { useAppState } from "@/components/providers/app-state-provider";
 import {
   logoutFromGreenCloud,
@@ -214,7 +215,7 @@ function NavButton({
     <Link
       href={item.href}
       className={cn(
-        "group inline-flex h-11 items-center gap-2 rounded-full border px-3 text-sm font-semibold transition 2xl:px-4",
+        "group inline-flex h-10 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition xl:h-11 xl:text-sm",
         active
           ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_16px_36px_var(--gc-glow)]"
           : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
@@ -222,16 +223,16 @@ function NavButton({
       title={item.label}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      <span className="hidden 2xl:inline">{item.label}</span>
+      <span className="hidden sm:inline">{item.label}</span>
     </Link>
   );
 }
 
 export default function AppTopbar({
-  title = "Control Center",
+  title = "GreenCloud Control Center",
   subtitle,
   eyebrow = "GREENCLOUD WORKSPACE",
-  description = "Monitor paired devices, live plant telemetry, irrigation rules, alerts, and protected hardware control.",
+  description = "Private irrigation workspace with live device telemetry and protected pump control.",
   onOpenMobileSidebar,
 }: AppTopbarProps) {
   const pathname = usePathname();
@@ -301,152 +302,158 @@ export default function AppTopbar({
       <div className="premium-noise relative overflow-hidden rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_94%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_82%,black)] shadow-[0_24px_90px_rgba(0,0,0,0.38),0_0_44px_var(--gc-glow)] backdrop-blur-2xl">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,color-mix(in_srgb,var(--gc-accent)_13%,transparent),transparent_32%),radial-gradient(circle_at_82%_20%,color-mix(in_srgb,var(--gc-accent-2)_11%,transparent),transparent_30%)]" />
 
-        <div className="relative z-10 flex flex-col gap-5 px-5 py-5 lg:px-7">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="flex min-w-0 items-start gap-4">
-              {onOpenMobileSidebar ? (
-                <button
-                  type="button"
-                  onClick={onOpenMobileSidebar}
-                  className="premium-btn-secondary flex h-12 w-12 shrink-0 items-center justify-center rounded-full xl:hidden"
-                  aria-label="Open navigation"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              ) : null}
+        <div className="relative z-10 px-5 py-5 lg:px-6">
+          <div className="flex flex-col gap-5">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-start gap-4">
+                {onOpenMobileSidebar ? (
+                  <button
+                    type="button"
+                    onClick={onOpenMobileSidebar}
+                    className="premium-btn-secondary flex h-12 w-12 shrink-0 items-center justify-center rounded-full xl:hidden"
+                    aria-label="Open navigation"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </button>
+                ) : null}
 
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--gc-muted)]">
-                  {eyebrow}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--gc-muted)]">
+                    {eyebrow}
+                  </p>
 
-                <h1 className="mt-1 break-words text-3xl font-semibold tracking-[-0.06em] text-[var(--gc-text)] sm:text-4xl">
-                  {title}
-                </h1>
+                  <h1 className="mt-1 break-words text-3xl font-semibold tracking-[-0.06em] text-[var(--gc-text)] sm:text-4xl">
+                    {title}
+                  </h1>
 
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--gc-soft)] sm:text-base">
-                  {finalDescription}
-                </p>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--gc-soft)] sm:text-base">
+                    {finalDescription}
+                  </p>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <TopbarChip
-                    label={selectedDevice.status}
-                    icon={Wifi}
-                    tone={statusTone(selectedDevice.status)}
-                  />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <TopbarChip
+                      label={selectedDevice.status}
+                      icon={Wifi}
+                      tone={statusTone(selectedDevice.status)}
+                    />
 
-                  <TopbarChip
-                    label={sensorStatus}
-                    icon={Leaf}
-                    tone={statusTone(sensorStatus)}
-                  />
+                    <TopbarChip
+                      label={sensorStatus}
+                      icon={Leaf}
+                      tone={statusTone(sensorStatus)}
+                    />
 
-                  <TopbarChip
-                    label={relayState}
-                    icon={Lock}
-                    tone={statusTone(relayState)}
-                  />
+                    <TopbarChip
+                      label={relayState}
+                      icon={Lock}
+                      tone={statusTone(relayState)}
+                    />
 
-                  <TopbarChip label={pumpLabel} icon={Droplets} tone={pumpTone} />
+                    <TopbarChip
+                      label={pumpLabel}
+                      icon={Droplets}
+                      tone={pumpTone}
+                    />
 
-                  <TopbarChip
-                    label={commandLabel}
-                    icon={Cpu}
-                    tone={statusTone(commandLabel)}
-                  />
+                    <TopbarChip
+                      label={commandLabel}
+                      icon={Cpu}
+                      tone={statusTone(commandLabel)}
+                    />
 
-                  <TopbarChip
-                    label={settings.workspaceName || "GreenCloud"}
-                    icon={UserRound}
-                    tone="safe"
-                  />
+                    <TopbarChip
+                      label={settings.workspaceName || "GreenCloud"}
+                      icon={UserRound}
+                      tone="safe"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center xl:justify-end">
-              <div className="relative min-w-0 sm:w-[320px]">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--gc-muted)]" />
-
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search workspace..."
-                  className="h-12 w-full rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] pl-11 pr-4 text-sm text-[var(--gc-text)] outline-none transition placeholder:text-[var(--gc-muted)] focus:border-[color-mix(in_srgb,var(--gc-accent)_38%,transparent)] focus:bg-[color-mix(in_srgb,var(--gc-bg)_62%,black)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)]"
-                />
-              </div>
-
+            <div className="flex w-full min-w-0 flex-col gap-3">
               <nav className="flex flex-wrap items-center gap-2">
-                <div className="hidden items-center gap-2 xl:flex">
-                  {navItems.map((item) => {
-                    const active =
-                      item.href === "/"
-                        ? pathname === "/"
-                        : pathname.startsWith(item.href);
+                {navItems.map((item) => {
+                  const active =
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(item.href);
 
-                    return (
-                      <NavButton key={item.href} item={item} active={active} />
-                    );
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  aria-label="Open quick controls"
-                  onClick={openQuickPanel}
-                  className={cn(
-                    "relative inline-flex h-11 w-11 items-center justify-center rounded-full border transition",
-                    quickPanelOpen
-                      ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_16px_36px_var(--gc-glow)]"
-                      : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
-                  )}
-                >
-                  <Settings2 className="h-4 w-4" />
-                </button>
-
-                <button
-                  type="button"
-                  aria-label="Open alerts"
-                  onClick={openNotifications}
-                  className={cn(
-                    "relative inline-flex h-11 w-11 items-center justify-center rounded-full border transition",
-                    notificationsOpen
-                      ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_16px_36px_var(--gc-glow)]"
-                      : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
-                  )}
-                >
-                  <Bell className="h-4 w-4" />
-
-                  {unreadCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--gc-bg)_80%,black)] bg-[var(--gc-accent)] px-1 text-[10px] font-bold text-[#11160d] shadow-[0_0_22px_var(--gc-glow-strong)]">
-                      {unreadCount}
-                    </span>
-                  ) : null}
-                </button>
-
-                <div className="hidden h-11 max-w-[220px] items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] pl-2 pr-3 text-[var(--gc-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] 2xl:flex">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] text-[var(--gc-accent-2)]">
-                    <UserRound className="h-4 w-4" />
-                  </span>
-
-                  <span className="truncate text-sm font-semibold">
-                    {accountLabel}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={isSigningOut}
-                  className="inline-flex h-11 items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] px-4 text-sm font-semibold text-[var(--gc-soft)] transition hover:border-[color-mix(in_srgb,var(--gc-danger)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--gc-danger)_10%,transparent)] hover:text-[var(--gc-text)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden xl:inline">
-                    {isSigningOut ? "Signing out..." : "Sign out"}
-                  </span>
-                </button>
+                  return (
+                    <NavButton key={item.href} item={item} active={active} />
+                  );
+                })}
               </nav>
+
+              <div className="flex w-full min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="relative min-w-0 flex-1 lg:max-w-[420px]">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--gc-muted)]" />
+
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search workspace..."
+                    className="h-12 w-full rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] pl-11 pr-4 text-sm text-[var(--gc-text)] outline-none transition placeholder:text-[var(--gc-muted)] focus:border-[color-mix(in_srgb,var(--gc-accent)_38%,transparent)] focus:bg-[color-mix(in_srgb,var(--gc-bg)_62%,black)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)]"
+                  />
+                </div>
+
+                <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
+                  <button
+                    type="button"
+                    aria-label="Open quick controls"
+                    onClick={openQuickPanel}
+                    className={cn(
+                      "relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition",
+                      quickPanelOpen
+                        ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_16px_36px_var(--gc-glow)]"
+                        : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
+                    )}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    aria-label="Open alerts"
+                    onClick={openNotifications}
+                    className={cn(
+                      "relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition",
+                      notificationsOpen
+                        ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_16px_36px_var(--gc-glow)]"
+                        : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
+                    )}
+                  >
+                    <Bell className="h-4 w-4" />
+
+                    {unreadCount > 0 ? (
+                      <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--gc-bg)_80%,black)] bg-[var(--gc-accent)] px-1 text-[10px] font-bold text-[#11160d] shadow-[0_0_22px_var(--gc-glow-strong)]">
+                        {unreadCount}
+                      </span>
+                    ) : null}
+                  </button>
+
+                  <div className="flex h-11 min-w-0 max-w-[180px] items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] pl-2 pr-3 text-[var(--gc-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] sm:max-w-[220px]">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] text-[var(--gc-accent-2)]">
+                      <UserRound className="h-4 w-4" />
+                    </span>
+
+                    <span className="truncate text-sm font-semibold">
+                      {accountLabel}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] px-4 text-sm font-semibold text-[var(--gc-soft)] transition hover:border-[color-mix(in_srgb,var(--gc-danger)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--gc-danger)_10%,transparent)] hover:text-[var(--gc-text)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>{isSigningOut ? "Signing out..." : "Sign out"}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
