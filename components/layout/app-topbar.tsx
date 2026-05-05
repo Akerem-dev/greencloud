@@ -276,6 +276,7 @@ export default function AppTopbar({
 
   const unreadCount = notifications.filter((item) => !item.read).length;
   const finalDescription = subtitle ?? description;
+  const profileActive = pathname.startsWith("/profile");
 
   const accountLabel =
     authUser?.displayName || authUser?.email || "Secure account";
@@ -433,7 +434,16 @@ export default function AppTopbar({
                     ) : null}
                   </button>
 
-                  <div className="flex h-11 min-w-0 max-w-[180px] items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] pl-2 pr-3 text-[var(--gc-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] sm:max-w-[220px]">
+                  <Link
+                    href="/profile"
+                    className={cn(
+                      "flex h-11 min-w-0 max-w-[180px] items-center gap-2 rounded-full border pl-2 pr-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition sm:max-w-[220px]",
+                      profileActive
+                        ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_16px_36px_var(--gc-glow)]"
+                        : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
+                    )}
+                    title="Open profile"
+                  >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] text-[var(--gc-accent-2)]">
                       <UserRound className="h-4 w-4" />
                     </span>
@@ -441,7 +451,7 @@ export default function AppTopbar({
                     <span className="truncate text-sm font-semibold">
                       {accountLabel}
                     </span>
-                  </div>
+                  </Link>
 
                   <button
                     type="button"

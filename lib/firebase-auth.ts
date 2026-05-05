@@ -135,6 +135,30 @@ export async function loginWithEmailPassword({
   return mapFirebaseUser(credential.user);
 }
 
+export async function updateCurrentUserDisplayName(displayName: string) {
+  const cleanDisplayName = displayName.trim();
+
+  if (!cleanDisplayName) {
+    throw new Error("Profile name is required.");
+  }
+
+  const user = firebaseAuth.currentUser;
+
+  if (!user) {
+    throw new Error("You must be signed in to update your profile.");
+  }
+
+  await updateProfile(user, {
+    displayName: cleanDisplayName,
+  });
+
+  return {
+    uid: user.uid,
+    email: user.email,
+    displayName: cleanDisplayName,
+  };
+}
+
 export async function logoutFromGreenCloud() {
   await signOut(firebaseAuth);
 }

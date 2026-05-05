@@ -29,6 +29,7 @@ import {
 } from "@/lib/firebase-greencloud";
 import {
   subscribeToAuthState,
+  updateCurrentUserDisplayName,
   type GreenCloudAuthUser,
 } from "@/lib/firebase-auth";
 
@@ -297,6 +298,7 @@ export type AppStateContextValue = {
   clearActivity: () => void;
 
   loginToWorkspace: (name: string, email: string) => void;
+  updateProfileName: (displayName: string) => Promise<void>;
   logoutFromWorkspace: () => void;
 };
 
@@ -1947,6 +1949,81 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [pushActivity, pushNotification, selectedDevice.id],
   );
 
+    const updateProfileName = useCallback(
+    async (displayName: string) => {
+      const cleanName = displayName.trim();
+
+      if (!cleanName) {
+        throw new Error("Profile name is required.");
+      }
+
+      const updatedUser = await updateCurrentUserDisplayName(cleanName);
+
+      setAuthUser((current) =>
+        current
+          ? {
+              ...current,
+              displayName: cleanName,
+              email: updatedUser.email ?? current.email,
+            }
+          : {
+              uid: updatedUser.uid,
+              email: updatedUser.email,
+              displayName: cleanName,
+            },
+      );
+
+      setAppState((current) => {
+        const nextSettings = normalizeSettings({
+          ...current.settings,
+          ownerName: cleanName,
+        });
+
+        return {
+          ...current,
+          settings: nextSettings,
+          session: {
+            ...current.session,
+            signedIn: true,
+            userName: cleanName,
+            email: updatedUser.email || current.session.email,
+          },
+        };
+      });
+
+      if (currentUserId) {
+        const nextSettings = normalizeSettings({
+          ...settings,
+          ownerName: cleanName,
+        });
+
+        await writeSettingsToFirebase(currentUserId, nextSettings);
+      }
+
+      pushActivity({
+        title: "Profile updated",
+        description: `${cleanName} updated the GreenCloud profile name.`,
+        body: `${cleanName} updated the GreenCloud profile name.`,
+        status: "Completed",
+        deviceId: selectedDevice.id,
+      });
+
+      pushNotification({
+        title: "Profile updated",
+        body: `Your profile name is now ${cleanName}.`,
+        description: `Your profile name is now ${cleanName}.`,
+        read: false,
+      });
+    },
+    [
+      currentUserId,
+      pushActivity,
+      pushNotification,
+      selectedDevice.id,
+      settings,
+    ],
+  );
+
   const logoutFromWorkspace = useCallback(() => {
     setAppState((current) => ({
       ...current,
@@ -2016,6 +2093,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       clearActivity,
 
       loginToWorkspace,
+      updateProfileName,
       logoutFromWorkspace,
     }),
     [
@@ -2058,6 +2136,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toggleQuickPanel,
       clearActivity,
       loginToWorkspace,
+      updateProfileName,
       logoutFromWorkspace,
     ],
   );

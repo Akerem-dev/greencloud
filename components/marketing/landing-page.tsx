@@ -21,6 +21,7 @@ import {
   Sprout,
   ToggleLeft,
   Umbrella,
+  UserRound,
   Waves,
   Wifi,
   X,
@@ -729,11 +730,12 @@ function LandingToastStack({ toasts }: { toasts: ToastItem[] }) {
 }
 
 export default function LandingPage() {
-  const {
+    const {
     selectedDevice,
     devices,
     settings,
     automation,
+    session,
     unreadNotifications,
     selectDevice,
     startIrrigation,
@@ -742,6 +744,13 @@ export default function LandingPage() {
     openNotifications,
     openQuickPanel,
   } = useAppState();
+
+    const accountLabel =
+    session.signedIn && session.userName
+      ? session.userName
+      : session.signedIn && session.email
+        ? session.email
+        : "Login";
 
   const selectedExtra = selectedDevice as typeof selectedDevice &
     LandingDeviceExtra;
@@ -957,11 +966,19 @@ export default function LandingPage() {
                   Control
                 </a>
 
-                <Link
-                  href="/auth"
-                  className="premium-btn-secondary rounded-2xl px-5 py-2.5 text-sm font-semibold"
+                                <Link
+                  href={session.signedIn ? "/profile" : "/auth"}
+                  className={cn(
+                    "premium-btn-secondary inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold",
+                    session.signedIn
+                      ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_22px_var(--gc-glow)]"
+                      : "",
+                  )}
                 >
-                  Login
+                  {session.signedIn ? <UserRound className="h-4 w-4" /> : null}
+                  <span className="max-w-[120px] truncate">
+                    {session.signedIn ? accountLabel : "Login"}
+                  </span>
                 </Link>
 
                 <button
