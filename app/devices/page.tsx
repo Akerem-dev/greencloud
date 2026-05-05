@@ -1103,7 +1103,7 @@ export default function DevicesPage() {
 
   const newestLabel = devices[0]?.name ?? "No device";
 
-  const handlePairDevice = async () => {
+    const handlePairDevice = async () => {
     const cleanCode = pairCode.trim();
 
     if (cleanCode.length !== 7) {
@@ -1116,25 +1116,29 @@ export default function DevicesPage() {
     setError("");
     setFeedback("");
 
-    const paired = await pairDeviceByCode(
-      cleanCode,
-      pairName.trim() || DEFAULT_DEVICE_NAME,
-      pairPlace.trim() || DEFAULT_DEVICE_PLACE,
-    );
+    try {
+      const paired = await pairDeviceByCode(
+        cleanCode,
+        pairName.trim() || DEFAULT_DEVICE_NAME,
+        pairPlace.trim() || DEFAULT_DEVICE_PLACE,
+      );
 
-    setIsPairing(false);
+      if (!paired) {
+        setError("Pairing failed. Check the OLED code and try again.");
+        return;
+      }
 
-    if (!paired) {
-      setError("Pairing failed. Check the OLED code and try again.");
-      return;
+      setPairCode("");
+      setPairName(DEFAULT_DEVICE_NAME);
+      setPairPlace(DEFAULT_DEVICE_PLACE);
+      setFeedback(`${paired.name} paired successfully.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Pairing failed.");
+    } finally {
+      setIsPairing(false);
     }
-
-    setPairCode("");
-    setPairName(DEFAULT_DEVICE_NAME);
-    setPairPlace(DEFAULT_DEVICE_PLACE);
-    setFeedback(`${paired.name} paired successfully.`);
   };
-
+  
   const confirmRemoveDevice = () => {
     if (!deleteTarget) return;
 
