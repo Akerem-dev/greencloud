@@ -339,7 +339,7 @@ function normalizeBoolean(value: unknown, fallback: boolean) {
 }
 
 function normalizePairingCode(value: string) {
-  return value.trim().replace(/\s+/g, "").toUpperCase();
+  return value.trim().replace(/\s+/g, "");
 }
 
 function normalizeTheme(value: unknown): ThemePreset {
