@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { RotateCcw, Save, Sparkles, X } from "lucide-react";
+
 import AuthGate from "@/components/auth/auth-gate";
 import AmbientOrbs from "@/components/effects/ambient-orbs";
 import LeafFallOverlay from "@/components/effects/leaf-fall-overlay";
@@ -76,24 +77,38 @@ function hasTelemetry(
   );
 }
 
+function displayStatus(value: string) {
+  const lower = value.toLowerCase();
+
+  if (lower === "pending" || lower === "none") return "Ready";
+  if (lower === "idle") return "Standby";
+  if (lower === "dry-run" || lower.includes("dry-run")) return "Protected";
+  if (lower === "locked" || lower === "safe") return "Protected";
+  if (lower === "handled") return "Completed";
+  if (lower === "sensor check") return "Calibrating";
+  if (lower === "ok") return "Safe";
+
+  return value;
+}
+
 function toneClass(tone: Tone) {
   if (tone === "live") {
-    return "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_13%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)] text-[var(--gc-text)]";
   }
 
   if (tone === "safe") {
-    return "border-[color-mix(in_srgb,var(--gc-accent-2)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_12%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-accent-2)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_9%,transparent)] text-[var(--gc-text)]";
   }
 
   if (tone === "warning") {
-    return "border-[color-mix(in_srgb,var(--gc-warn)_38%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_14%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-warn)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_10%,transparent)] text-[var(--gc-text)]";
   }
 
   if (tone === "offline") {
-    return "border-[color-mix(in_srgb,var(--gc-warn)_38%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_12%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_10%,transparent)] text-[var(--gc-text)]";
   }
 
-  return "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)]";
+  return "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_68%,transparent)] text-[var(--gc-soft)]";
 }
 
 function statusTone(value: string): Tone {
@@ -107,7 +122,8 @@ function statusTone(value: string): Tone {
     lower.includes("clear") ||
     lower.includes("ok") ||
     lower.includes("handled") ||
-    lower.includes("seen")
+    lower.includes("seen") ||
+    lower.includes("completed")
   ) {
     return "live";
   }
@@ -132,29 +148,20 @@ function statusTone(value: string): Tone {
     lower.includes("empty") ||
     lower.includes("detected") ||
     lower.includes("sensor check") ||
-    lower.includes("blocked")
+    lower.includes("blocked") ||
+    lower.includes("calibrating")
   ) {
     return "warning";
-  }
-
-  if (
-    lower.includes("pending") ||
-    lower.includes("idle") ||
-    lower.includes("none") ||
-    lower.includes("syncing") ||
-    lower.includes("waiting")
-  ) {
-    return "pending";
   }
 
   return "pending";
 }
 
 function getSensorStatus(device: ShellDeviceExtra & { status?: string }) {
-  if (device.sensorStatus) return device.sensorStatus;
+  if (device.sensorStatus) return displayStatus(device.sensorStatus);
   if (device.status === "Offline") return "No signal";
   if (device.status === "Syncing") return "Syncing";
-  return "Pending";
+  return "Ready";
 }
 
 function numberLabel(value: unknown, fallback = "—") {
@@ -176,18 +183,18 @@ function voltageLabel(value: unknown) {
 function temperatureLabel(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
     ? `${value.toFixed(1)}°C`
-    : "Pending";
+    : "Ready";
 }
 
 function pressureLabel(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
     ? `${Math.round(value)} hPa`
-    : "Pending";
+    : "Ready";
 }
 
 function getLastSeenLabel(device: ShellDeviceExtra) {
   if (typeof device.lastSeenMs !== "number") {
-    return device.updatedAt || "Waiting";
+    return device.updatedAt || "Ready";
   }
 
   if (device.lastSeenMs > 1_000_000_000_000) {
@@ -205,21 +212,17 @@ function getLastSeenLabel(device: ShellDeviceExtra) {
   return `${Math.max(1, Math.round(device.lastSeenMs / 1000))}s runtime`;
 }
 
-function StatusPill({
-  label,
-  tone,
-}: {
-  label: string;
-  tone?: Tone;
-}) {
+function StatusPill({ label, tone }: { label: string; tone?: Tone }) {
+  const visibleLabel = displayStatus(label);
+
   return (
     <span
       className={cn(
-        "inline-flex max-w-full rounded-full border px-3 py-1.5 text-xs font-semibold",
-        toneClass(tone ?? statusTone(label)),
+        "inline-flex max-w-full items-center rounded-full border px-3 py-1.5 text-xs font-semibold",
+        toneClass(tone ?? statusTone(visibleLabel)),
       )}
     >
-      <span className="truncate">{label}</span>
+      <span className="truncate">{visibleLabel}</span>
     </span>
   );
 }
@@ -236,7 +239,7 @@ function SettingRow({
   onClick: () => void;
 }) {
   return (
-    <div className="min-w-0 rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_76%,black)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+    <div className="min-w-0 rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_76%,transparent)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.012)]">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[var(--gc-text)]">
@@ -254,8 +257,8 @@ function SettingRow({
           className={cn(
             "shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition",
             active
-              ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_24px_var(--gc-glow)]"
-              : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_24%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
+              ? "border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_14%,transparent)] text-[var(--gc-text)] shadow-[0_0_18px_var(--gc-glow)]"
+              : "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_64%,transparent)] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_22%,transparent)] hover:bg-white/[0.035] hover:text-[var(--gc-text)]",
           )}
         >
           {active ? "On" : "Off"}
@@ -281,8 +284,8 @@ function ChoiceButton({
       className={cn(
         "max-w-full rounded-full border px-4 py-2 text-sm font-semibold transition",
         active
-          ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_24px_var(--gc-glow)]"
-          : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_24%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
+          ? "border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_14%,transparent)] text-[var(--gc-text)] shadow-[0_0_18px_var(--gc-glow)]"
+          : "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_60%,transparent)] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_22%,transparent)] hover:bg-white/[0.035] hover:text-[var(--gc-text)]",
       )}
     >
       <span className="block truncate">{children}</span>
@@ -302,9 +305,9 @@ function StateTile({
   return (
     <div
       className={cn(
-        "min-w-0 rounded-[22px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]",
+        "min-w-0 rounded-[22px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.012)]",
         tone === "pending"
-          ? "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_76%,black)]"
+          ? "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_76%,transparent)]"
           : toneClass(tone),
       )}
     >
@@ -312,8 +315,8 @@ function StateTile({
         {label}
       </p>
 
-      <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.8rem,3vw,2.6rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--gc-text)]">
-        {value}
+      <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.6rem,2.4vw,2.35rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--gc-text)]">
+        {displayStatus(String(value))}
       </p>
     </div>
   );
@@ -373,19 +376,17 @@ export default function AppShell({
 
   const relayState =
     selectedExtra.relayState ??
-    (safeModeActive || !pumpEnabled ? "Locked" : "Enabled");
+    (safeModeActive || !pumpEnabled ? "Protected" : "Enabled");
 
   const pumpState =
     selectedExtra.pumpState ??
-    (safeModeActive || !pumpEnabled ? "Dry-run" : "Ready");
+    (safeModeActive || !pumpEnabled ? "Protected" : "Ready");
 
   const moistureLabel = telemetryReady
     ? `${selectedDevice.moisture}%`
-    : "Waiting";
+    : "Ready";
 
-  const signalLabel = telemetryReady
-    ? `${selectedDevice.signal}%`
-    : "Waiting";
+  const signalLabel = telemetryReady ? `${selectedDevice.signal}%` : "Ready";
 
   const currentAmbience = settings.leafAmbience
     ? settings.ambienceMode
@@ -408,30 +409,25 @@ export default function AppShell({
   return (
     <AuthGate>
       <main className="relative min-h-screen overflow-x-hidden bg-[var(--gc-bg)] text-[var(--gc-text)]">
-        <div className="fixed inset-0 -z-40 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--gc-accent)_15%,transparent),transparent_32%),radial-gradient(circle_at_82%_18%,color-mix(in_srgb,var(--gc-accent-2)_10%,transparent),transparent_28%),linear-gradient(180deg,var(--gc-bg-2),var(--gc-bg))]" />
+        <div className="fixed inset-0 -z-40 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--gc-accent)_11%,transparent),transparent_32%),radial-gradient(circle_at_82%_18%,color-mix(in_srgb,var(--gc-accent-2)_7%,transparent),transparent_28%),linear-gradient(180deg,var(--gc-bg-2),var(--gc-bg))]" />
 
         <AmbientOrbs themePreset={settings.themePreset} />
 
-        <div className="fixed inset-0 -z-30 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-accent)_8%,transparent),transparent_24%,color-mix(in_srgb,var(--gc-accent-2)_6%,transparent)_74%,transparent)]" />
+        <div className="fixed inset-0 -z-30 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-accent)_4%,transparent),transparent_24%,color-mix(in_srgb,var(--gc-accent-2)_3%,transparent)_74%,transparent)]" />
 
         {!isBootLoading && settings.leafAmbience ? (
           <LeafFallOverlay mode={settings.ambienceMode} />
         ) : null}
 
-        <div
-          className={cn(
-            "relative z-10 mx-auto w-full max-w-[1680px]",
-            shellPad,
-          )}
-        >
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
-            <div className="hidden self-start xl:block">
-              <div className="sticky top-4 h-[calc(100dvh-32px)] min-h-[calc(100dvh-32px)]">
+        <div className={cn("relative z-10 w-full", shellPad)}>
+          <div className="mx-auto grid w-full max-w-[1840px] grid-cols-1 gap-5 xl:grid-cols-[290px_minmax(0,1fr)] 2xl:grid-cols-[310px_minmax(0,1fr)]">
+            <div className="hidden min-w-0 xl:block">
+              <div className="sticky top-4 h-[calc(100dvh-32px)] min-h-0 overflow-hidden">
                 <AppSidebar />
               </div>
             </div>
 
-            <div className="min-w-0">
+            <section className="min-w-0">
               <AppTopbar
                 title={title}
                 subtitle={subtitle}
@@ -444,7 +440,7 @@ export default function AppShell({
                     <SectionBadge>Workspace search</SectionBadge>
 
                     <p className="mt-3 text-sm text-[var(--gc-soft)]">
-                      Filtering GreenCloud workspace for{" "}
+                      Showing GreenCloud workspace results for{" "}
                       <span className="font-semibold text-[var(--gc-text)]">
                         {searchQuery}
                       </span>
@@ -453,13 +449,13 @@ export default function AppShell({
                 </div>
               ) : null}
 
-              <div className="mt-6 min-w-0">{children}</div>
-            </div>
+              <div className="mt-5 min-w-0">{children}</div>
+            </section>
           </div>
         </div>
 
         {mobileSidebarOpen ? (
-          <div className="fixed inset-0 z-[95] bg-black/65 backdrop-blur-[6px] xl:hidden">
+          <div className="fixed inset-0 z-[95] bg-black/62 backdrop-blur-[7px] xl:hidden">
             <button
               type="button"
               className="absolute inset-0"
@@ -467,7 +463,7 @@ export default function AppShell({
               aria-label="Close navigation"
             />
 
-            <div className="absolute bottom-3 left-3 top-3 w-[min(92vw,390px)]">
+            <div className="absolute bottom-3 left-3 top-3 w-[min(92vw,360px)]">
               <div className="relative h-full">
                 <button
                   type="button"
@@ -485,44 +481,60 @@ export default function AppShell({
         ) : null}
 
         {notificationsOpen ? (
-          <div className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-[6px]">
+          <div className="fixed inset-0 z-[100] overflow-hidden bg-black/62 backdrop-blur-[8px]">
             <button
               type="button"
-              className="absolute inset-0"
+              className="fixed inset-0 z-0"
               onClick={closeNotifications}
               aria-label="Close notifications"
             />
 
-            <div className="absolute inset-x-3 top-3 mx-auto w-[min(460px,calc(100vw-24px))] sm:inset-x-auto sm:right-4 sm:mx-0">
-              <GlassCard className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <SectionBadge>Alerts</SectionBadge>
+            <section
+              className={cn(
+                "fixed bottom-3 right-3 top-3 z-20 flex w-[min(520px,calc(100vw-24px))] min-h-0 flex-col overflow-hidden rounded-[34px] border",
+                "border-[color-mix(in_srgb,var(--gc-border)_60%,transparent)]",
+                "bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-bg)_82%,black),color-mix(in_srgb,var(--gc-bg)_92%,black))]",
+                "shadow-[0_34px_100px_rgba(0,0,0,0.52),0_0_42px_color-mix(in_srgb,var(--gc-glow)_28%,transparent),inset_0_1px_0_rgba(255,255,255,0.024)]",
+                "backdrop-blur-2xl",
+              )}
+              onWheel={(event) => event.stopPropagation()}
+            >
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,color-mix(in_srgb,var(--gc-accent)_9%,transparent),transparent_38%),radial-gradient(circle_at_92%_8%,color-mix(in_srgb,var(--gc-accent-2)_7%,transparent),transparent_34%)]" />
 
-                    <h3 className="mt-3 text-[clamp(2rem,4vw,3rem)] font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
+              <div className="relative z-10 shrink-0 border-b border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <SectionBadge>Alerts center</SectionBadge>
+
+                    <h3 className="mt-4 text-[clamp(2.25rem,5vw,3.8rem)] font-semibold leading-none tracking-[-0.08em] text-[var(--gc-text)]">
                       GreenCloud events
                     </h3>
 
-                    <p className="mt-2 text-sm leading-6 text-[var(--gc-soft)]">
-                      Device sync, sensor readings, protected commands and
-                      safety messages.
+                    <p className="mt-3 max-w-md text-sm leading-6 text-[var(--gc-soft)]">
+                      Device sync, sensor checks, protected commands and
+                      workspace updates appear here.
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={closeNotifications}
-                    className="premium-btn-secondary flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    className="premium-btn-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
                     aria-label="Close notifications"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="mt-5 flex flex-wrap items-center gap-2">
                   <StatusPill
                     label={`${unreadCount} unread`}
                     tone={unreadCount > 0 ? "warning" : "live"}
+                  />
+
+                  <StatusPill
+                    label={`${notifications.length} total`}
+                    tone="pending"
                   />
 
                   <button
@@ -530,350 +542,427 @@ export default function AppShell({
                     onClick={markAllNotificationsRead}
                     className="premium-btn-secondary rounded-full px-4 py-2 text-sm"
                   >
-                    Mark read
+                    Mark all read
                   </button>
                 </div>
+              </div>
 
-                <div className="gc-scrollbar mt-5 max-h-[72vh] space-y-3 overflow-y-auto pr-2">
-                  {notifications.length === 0 ? (
-                    <div className="rounded-[22px] border border-dashed border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_76%,black)] p-5">
-                      <p className="text-lg font-semibold text-[var(--gc-text)]">
-                        No alerts yet.
-                      </p>
+              <div
+                className="modal-scroll relative z-10 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pr-3 sm:p-5 sm:pr-4"
+                style={{ WebkitOverflowScrolling: "touch" }}
+              >
+                {notifications.length === 0 ? (
+                  <div className="flex h-full min-h-[360px] items-center justify-center rounded-[28px] border border-dashed border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_70%,transparent)] p-6 text-center">
+                    <div className="max-w-xs">
+                      <SectionBadge>No alerts</SectionBadge>
 
-                      <p className="mt-2 text-sm leading-7 text-[var(--gc-soft)]">
-                        Commands, threshold warnings, sensor checks and sync
-                        events will appear here.
+                      <h4 className="mt-4 text-[clamp(2rem,5vw,3rem)] font-semibold leading-none tracking-[-0.07em] text-[var(--gc-text)]">
+                        All clear.
+                      </h4>
+
+                      <p className="mt-3 text-sm leading-6 text-[var(--gc-soft)]">
+                        Commands, pairing events, sensor checks and Firebase
+                        sync messages will appear here.
                       </p>
                     </div>
-                  ) : (
-                    notifications.map((item) => (
-                      <div
-                        key={item.id}
-                        className={cn(
-                          "gc-panel-hover min-w-0 rounded-[22px] border p-4",
-                          item.read
-                            ? "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_76%,black)]"
-                            : "border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)]",
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="min-w-0 truncate text-sm font-semibold text-[var(--gc-text)]">
-                            {item.title}
-                          </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notifications.map((item, index) => {
+                      const isUnread = !item.read;
 
-                          {!item.read ? (
-                            <span className="shrink-0 rounded-full bg-[var(--gc-accent)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#11160d] shadow-[0_0_16px_var(--gc-glow)]">
-                              New
-                            </span>
-                          ) : null}
+                      return (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "group relative min-w-0 overflow-hidden rounded-[26px] border p-4 transition duration-300",
+                            "shadow-[inset_0_1px_0_rgba(255,255,255,0.018),0_16px_34px_rgba(0,0,0,0.14)]",
+                            isUnread
+                              ? "border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--gc-accent)_12%,transparent),rgba(255,255,255,0.022))]"
+                              : "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.014))]",
+                          )}
+                        >
+                          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_0%,color-mix(in_srgb,var(--gc-accent)_7%,transparent),transparent_40%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+
+                          <div className="relative z-10 flex items-start gap-3">
+                            <div
+                              className={cn(
+                                "mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border text-sm font-bold",
+                                isUnread
+                                  ? "border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] text-[var(--gc-text)] shadow-[0_0_18px_var(--gc-glow)]"
+                                  : "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-black/14 text-[var(--gc-soft)]",
+                              )}
+                            >
+                              #{index + 1}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex min-w-0 items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate text-base font-semibold tracking-[-0.04em] text-[var(--gc-text)]">
+                                    {item.title}
+                                  </p>
+
+                                  <p className="mt-1 text-xs font-medium text-[var(--gc-muted)]">
+                                    {item.createdAt}
+                                  </p>
+                                </div>
+
+                                {isUnread ? (
+                                  <span className="shrink-0 rounded-full bg-[var(--gc-accent)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#11160d] shadow-[0_0_16px_var(--gc-glow)]">
+                                    New
+                                  </span>
+                                ) : (
+                                  <span className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-black/14 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--gc-muted)]">
+                                    Read
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="mt-3 line-clamp-4 text-sm leading-6 text-[var(--gc-soft)]">
+                                {item.description || item.body}
+                              </p>
+                            </div>
+                          </div>
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-                        <p className="mt-2 line-clamp-3 text-sm leading-7 text-[var(--gc-soft)]">
-                          {item.description || item.body}
-                        </p>
+              <div className="relative z-10 shrink-0 border-t border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-black/10 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--gc-text)]">
+                      Alert stream is synced.
+                    </p>
 
-                        <p className="mt-2 text-xs text-[var(--gc-muted)]">
-                          {item.createdAt}
-                        </p>
-                      </div>
-                    ))
-                  )}
+                    <p className="mt-1 text-xs leading-5 text-[var(--gc-muted)]">
+                      Firebase, ESP32 events and protected command results are
+                      listed here.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={closeNotifications}
+                    className="premium-btn inline-flex shrink-0 items-center justify-center rounded-full px-5 py-2.5 text-sm"
+                  >
+                    Done
+                  </button>
                 </div>
-              </GlassCard>
-            </div>
+              </div>
+            </section>
           </div>
         ) : null}
 
         {quickPanelOpen ? (
-          <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-[8px]">
+          <div className="fixed inset-0 z-[110] overflow-hidden bg-black/62 backdrop-blur-[10px]">
             <button
               type="button"
-              className="absolute inset-0"
+              className="fixed inset-0 z-0"
               onClick={closeQuickPanel}
               aria-label="Close quick settings"
             />
 
-            <div className="absolute inset-x-3 top-3 mx-auto w-[min(1120px,calc(100vw-24px))]">
-              <GlassCard className="overflow-hidden p-0">
-                <div className="border-b border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] p-5 md:p-6">
-                  <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                    <div className="min-w-0">
-                      <SectionBadge>Quick controls</SectionBadge>
+            <section
+              className={cn(
+                "fixed bottom-3 left-1/2 top-3 z-20 flex w-[min(1120px,calc(100vw-24px))] min-h-0 -translate-x-1/2 flex-col overflow-hidden rounded-[34px] border",
+                "border-[color-mix(in_srgb,var(--gc-border)_60%,transparent)]",
+                "bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-bg)_82%,black),color-mix(in_srgb,var(--gc-bg)_92%,black))]",
+                "shadow-[0_34px_100px_rgba(0,0,0,0.52),0_0_46px_color-mix(in_srgb,var(--gc-glow)_32%,transparent),inset_0_1px_0_rgba(255,255,255,0.024)]",
+                "backdrop-blur-2xl",
+              )}
+              onWheel={(event) => event.stopPropagation()}
+            >
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_0%,color-mix(in_srgb,var(--gc-accent)_9%,transparent),transparent_38%),radial-gradient(circle_at_90%_0%,color-mix(in_srgb,var(--gc-accent-2)_9%,transparent),transparent_36%)]" />
 
-                      <h3 className="mt-4 text-[clamp(2.4rem,5vw,4.4rem)] font-semibold leading-none tracking-[-0.08em] text-[var(--gc-text)]">
-                        GreenCloud workspace
-                      </h3>
+              <div className="relative z-10 shrink-0 border-b border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] p-5 md:p-6">
+                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0">
+                    <SectionBadge>Quick controls</SectionBadge>
 
-                      <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
-                        Fast controls for theme, ambience, layout density and
-                        live device state.
-                      </p>
-                    </div>
+                    <h3 className="mt-4 text-[clamp(2.35rem,5vw,4.2rem)] font-semibold leading-none tracking-[-0.08em] text-[var(--gc-text)]">
+                      GreenCloud workspace
+                    </h3>
 
-                    <div className="flex shrink-0 items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={resetSettings}
-                        className="premium-btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                        Reset
-                      </button>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
+                      Fast controls for theme, ambience, layout density and live
+                      device state.
+                    </p>
+                  </div>
 
-                      <button
-                        type="button"
-                        onClick={closeQuickPanel}
-                        className="premium-btn-secondary flex h-11 w-11 items-center justify-center rounded-full"
-                        aria-label="Close quick settings"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={resetSettings}
+                      className="premium-btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Reset
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={closeQuickPanel}
+                      className="premium-btn-secondary flex h-11 w-11 items-center justify-center rounded-full"
+                      aria-label="Close quick settings"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
+              </div>
 
-                <div className="gc-scrollbar max-h-[76vh] overflow-y-auto p-5 md:p-6">
-                  <div className="grid items-start gap-6 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
-                    <div className="min-w-0 rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_76%,black)] p-5">
-                      <SectionBadge>Live device state</SectionBadge>
+              <div
+                className="modal-scroll relative z-10 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-5 pr-3 md:p-6 md:pr-4"
+                style={{ WebkitOverflowScrolling: "touch" }}
+              >
+                <div className="grid min-h-0 items-start gap-6 xl:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.28fr)]">
+                  <div className="min-w-0 rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_76%,transparent)] p-5">
+                    <SectionBadge>Live device state</SectionBadge>
 
-                      <h4 className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,4vw,3rem)] font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
-                        {selectedDevice.name}
-                      </h4>
+                    <h4 className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,4vw,3rem)] font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
+                      {selectedDevice.name}
+                    </h4>
 
-                      <p className="mt-2 line-clamp-2 text-sm leading-7 text-[var(--gc-soft)]">
-                        {selectedDevice.place}
-                      </p>
+                    <p className="mt-2 line-clamp-2 text-sm leading-7 text-[var(--gc-soft)]">
+                      {selectedDevice.place}
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <StatusPill
+                        label={selectedDevice.status}
+                        tone={statusTone(selectedDevice.status)}
+                      />
+
+                      <StatusPill
+                        label={sensorStatus}
+                        tone={statusTone(sensorStatus)}
+                      />
+
+                      <StatusPill
+                        label={pumpEnabled ? "Pump live" : pumpState}
+                        tone={pumpEnabled ? "warning" : "safe"}
+                      />
+
+                      <StatusPill
+                        label={relayState}
+                        tone={statusTone(relayState)}
+                      />
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      <StateTile
+                        label="Moisture"
+                        value={moistureLabel}
+                        tone={
+                          telemetryReady
+                            ? statusTone(sensorStatus)
+                            : "pending"
+                        }
+                      />
+
+                      <StateTile
+                        label="Signal"
+                        value={signalLabel}
+                        tone={telemetryReady ? "live" : "pending"}
+                      />
+
+                      <StateTile
+                        label="Raw soil"
+                        value={rawSoil}
+                        tone={
+                          !telemetryReady
+                            ? "pending"
+                            : statusTone(sensorStatus) === "warning"
+                              ? "warning"
+                              : "safe"
+                        }
+                      />
+
+                      <StateTile
+                        label="Voltage"
+                        value={soilVoltage}
+                        tone={soilVoltage === "—" ? "pending" : "safe"}
+                      />
+
+                      <StateTile
+                        label="Temperature"
+                        value={temperature}
+                        tone={temperatureReady ? "live" : "pending"}
+                      />
+
+                      <StateTile
+                        label="Pressure"
+                        value={pressure}
+                        tone={pressureReady ? "safe" : "pending"}
+                      />
+
+                      <StateTile
+                        label="Seen"
+                        value={getLastSeenLabel(selectedExtra)}
+                        tone="pending"
+                      />
+
+                      <StateTile
+                        label="Command"
+                        value={displayStatus(
+                          selectedExtra.lastCommandStatus ?? "Ready",
+                        )}
+                        tone={statusTone(
+                          selectedExtra.lastCommandStatus ?? "Ready",
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 space-y-6">
+                    <GlassCard className="p-5">
+                      <SectionBadge>Theme preset</SectionBadge>
 
                       <div className="mt-5 flex flex-wrap gap-2">
-                        <StatusPill
-                          label={selectedDevice.status}
-                          tone={statusTone(selectedDevice.status)}
-                        />
-                        <StatusPill
-                          label={sensorStatus}
-                          tone={statusTone(sensorStatus)}
-                        />
-                        <StatusPill
-                          label={pumpEnabled ? "Pump live" : pumpState}
-                          tone={pumpEnabled ? "warning" : "safe"}
-                        />
-                        <StatusPill
-                          label={relayState}
-                          tone={statusTone(relayState)}
-                        />
+                        {themeChoices.map((theme) => (
+                          <ChoiceButton
+                            key={theme.value}
+                            active={settings.themePreset === theme.value}
+                            onClick={() =>
+                              updateSetting("themePreset", theme.value)
+                            }
+                          >
+                            {theme.label}
+                          </ChoiceButton>
+                        ))}
                       </div>
+                    </GlassCard>
 
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
-                        <StateTile
-                          label="Moisture"
-                          value={moistureLabel}
-                          tone={telemetryReady ? statusTone(sensorStatus) : "pending"}
-                        />
+                    <GlassCard className="p-5">
+                      <SectionBadge>Ambience mode</SectionBadge>
 
-                        <StateTile
-                          label="Signal"
-                          value={signalLabel}
-                          tone={telemetryReady ? "live" : "pending"}
-                        />
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        {ambienceChoices.map((ambience) => (
+                          <ChoiceButton
+                            key={ambience.value}
+                            active={currentAmbience === ambience.value}
+                            onClick={() => applyAmbienceMode(ambience.value)}
+                          >
+                            {ambience.label}
+                          </ChoiceButton>
+                        ))}
+                      </div>
+                    </GlassCard>
 
-                        <StateTile
-                          label="Raw soil"
-                          value={rawSoil}
-                          tone={
-                            !telemetryReady
-                              ? "pending"
-                              : statusTone(sensorStatus) === "warning"
-                                ? "warning"
-                                : "safe"
-                          }
-                        />
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <SettingRow
+                        title="Animations"
+                        subtitle="Enable smooth transitions."
+                        active={settings.animations}
+                        onClick={() =>
+                          updateSetting("animations", !settings.animations)
+                        }
+                      />
 
-                        <StateTile
-                          label="Voltage"
-                          value={soilVoltage}
-                          tone={soilVoltage === "—" ? "pending" : "safe"}
-                        />
+                      <SettingRow
+                        title="Compact mode"
+                        subtitle="Use tighter spacing on small screens."
+                        active={settings.compactMode}
+                        onClick={() =>
+                          updateSetting("compactMode", !settings.compactMode)
+                        }
+                      />
 
-                        <StateTile
-                          label="Temperature"
-                          value={temperature}
-                          tone={temperatureReady ? "live" : "pending"}
-                        />
+                      <SettingRow
+                        title="Ambient layer"
+                        subtitle="Show or hide environmental visuals."
+                        active={settings.leafAmbience}
+                        onClick={() =>
+                          updateSetting("leafAmbience", !settings.leafAmbience)
+                        }
+                      />
 
-                        <StateTile
-                          label="Pressure"
-                          value={pressure}
-                          tone={pressureReady ? "safe" : "pending"}
-                        />
+                      <div className="min-w-0 rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_76%,transparent)] p-4">
+                        <p className="text-sm font-semibold text-[var(--gc-text)]">
+                          Notification mode
+                        </p>
 
+                        <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--gc-soft)]">
+                          Choose priority alerts or every workspace event.
+                        </p>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <ChoiceButton
+                            active={settings.notificationMode === "priority"}
+                            onClick={() =>
+                              updateSetting("notificationMode", "priority")
+                            }
+                          >
+                            Priority
+                          </ChoiceButton>
+
+                          <ChoiceButton
+                            active={settings.notificationMode === "all"}
+                            onClick={() =>
+                              updateSetting("notificationMode", "all")
+                            }
+                          >
+                            All
+                          </ChoiceButton>
+                        </div>
+                      </div>
+                    </div>
+
+                    <GlassCard className="p-5">
+                      <SectionBadge>Automation snapshot</SectionBadge>
+
+                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
                         <StateTile
-                          label="Seen"
-                          value={getLastSeenLabel(selectedExtra)}
+                          label="Mode"
+                          value={automation.mode}
                           tone="pending"
                         />
 
                         <StateTile
+                          label="Threshold"
+                          value={`${automation.moistureThreshold}%`}
+                          tone="safe"
+                        />
+
+                        <StateTile
                           label="Command"
-                          value={selectedExtra.lastCommandStatus ?? "None"}
-                          tone={statusTone(
-                            selectedExtra.lastCommandStatus ?? "None",
-                          )}
+                          value={`${automation.pumpDurationSeconds}s`}
+                          tone={pumpEnabled ? "warning" : "safe"}
                         />
                       </div>
-                    </div>
-
-                    <div className="min-w-0 space-y-6">
-                      <GlassCard className="p-5">
-                        <SectionBadge>Theme preset</SectionBadge>
-
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          {themeChoices.map((theme) => (
-                            <ChoiceButton
-                              key={theme.value}
-                              active={settings.themePreset === theme.value}
-                              onClick={() =>
-                                updateSetting("themePreset", theme.value)
-                              }
-                            >
-                              {theme.label}
-                            </ChoiceButton>
-                          ))}
-                        </div>
-                      </GlassCard>
-
-                      <GlassCard className="p-5">
-                        <SectionBadge>Ambience mode</SectionBadge>
-
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          {ambienceChoices.map((ambience) => (
-                            <ChoiceButton
-                              key={ambience.value}
-                              active={currentAmbience === ambience.value}
-                              onClick={() => applyAmbienceMode(ambience.value)}
-                            >
-                              {ambience.label}
-                            </ChoiceButton>
-                          ))}
-                        </div>
-                      </GlassCard>
-
-                      <div className="grid gap-4 lg:grid-cols-2">
-                        <SettingRow
-                          title="Animations"
-                          subtitle="Enable smooth transitions."
-                          active={settings.animations}
-                          onClick={() =>
-                            updateSetting("animations", !settings.animations)
-                          }
-                        />
-
-                        <SettingRow
-                          title="Compact mode"
-                          subtitle="Use tighter spacing on small screens."
-                          active={settings.compactMode}
-                          onClick={() =>
-                            updateSetting("compactMode", !settings.compactMode)
-                          }
-                        />
-
-                        <SettingRow
-                          title="Ambient layer"
-                          subtitle="Show or hide environmental visuals."
-                          active={settings.leafAmbience}
-                          onClick={() =>
-                            updateSetting(
-                              "leafAmbience",
-                              !settings.leafAmbience,
-                            )
-                          }
-                        />
-
-                        <div className="min-w-0 rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_76%,black)] p-4">
-                          <p className="text-sm font-semibold text-[var(--gc-text)]">
-                            Notification mode
-                          </p>
-
-                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--gc-soft)]">
-                            Choose priority alerts or every workspace event.
-                          </p>
-
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <ChoiceButton
-                              active={settings.notificationMode === "priority"}
-                              onClick={() =>
-                                updateSetting("notificationMode", "priority")
-                              }
-                            >
-                              Priority
-                            </ChoiceButton>
-
-                            <ChoiceButton
-                              active={settings.notificationMode === "all"}
-                              onClick={() =>
-                                updateSetting("notificationMode", "all")
-                              }
-                            >
-                              All
-                            </ChoiceButton>
-                          </div>
-                        </div>
-                      </div>
-
-                      <GlassCard className="p-5">
-                        <SectionBadge>Automation snapshot</SectionBadge>
-
-                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                          <StateTile
-                            label="Mode"
-                            value={automation.mode}
-                            tone="pending"
-                          />
-
-                          <StateTile
-                            label="Threshold"
-                            value={`${automation.moistureThreshold}%`}
-                            tone="safe"
-                          />
-
-                          <StateTile
-                            label="Command"
-                            value={`${automation.pumpDurationSeconds}s`}
-                            tone={pumpEnabled ? "warning" : "safe"}
-                          />
-                        </div>
-                      </GlassCard>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 rounded-[26px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_76%,black)] p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="flex items-center gap-2 text-sm font-semibold text-[var(--gc-text)]">
-                          <Sparkles className="h-4 w-4 text-[var(--gc-accent-2)]" />
-                          Quick controls apply instantly
-                        </p>
-
-                        <p className="mt-2 text-sm leading-6 text-[var(--gc-soft)]">
-                          Use Settings for workspace labels, quiet hours,
-                          thresholds and full hardware safety details.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={closeQuickPanel}
-                        className="premium-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-5 py-3 text-sm"
-                      >
-                        <Save className="h-4 w-4" />
-                        Done
-                      </button>
-                    </div>
+                    </GlassCard>
                   </div>
                 </div>
-              </GlassCard>
-            </div>
+              </div>
+
+              <div className="relative z-10 shrink-0 border-t border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-black/10 p-4 md:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-sm font-semibold text-[var(--gc-text)]">
+                      <Sparkles className="h-4 w-4 text-[var(--gc-accent-2)]" />
+                      Quick controls apply instantly
+                    </p>
+
+                    <p className="mt-2 text-sm leading-6 text-[var(--gc-soft)]">
+                      Theme, ambience and density changes are saved immediately.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={closeQuickPanel}
+                    className="premium-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-5 py-3 text-sm"
+                  >
+                    <Save className="h-4 w-4" />
+                    Done
+                  </button>
+                </div>
+              </div>
+            </section>
           </div>
         ) : null}
       </main>

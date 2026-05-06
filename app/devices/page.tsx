@@ -14,6 +14,7 @@ import {
   Lock,
   Monitor,
   Pencil,
+  Plus,
   Power,
   Radio,
   RefreshCw,
@@ -25,6 +26,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+
 import AppShell from "@/components/layout/app-shell";
 import GlassCard from "@/components/shared/glass-card";
 import SectionBadge from "@/components/shared/section-badge";
@@ -100,6 +102,20 @@ function getSensorStatus(device: DeviceExtra) {
   return "Pending";
 }
 
+function displayStatus(value: string) {
+  const lower = value.toLowerCase();
+
+  if (lower === "pending" || lower === "none") return "Ready";
+  if (lower === "idle") return "Standby";
+  if (lower === "dry-run" || lower.includes("dry-run")) return "Protected";
+  if (lower === "locked" || lower === "safe") return "Protected";
+  if (lower === "handled") return "Completed";
+  if (lower === "sensor check") return "Calibrating";
+  if (lower === "ok") return "Safe";
+
+  return value;
+}
+
 function getLastSeenLabel(device: DeviceExtra) {
   if (typeof device.lastSeenMs !== "number") {
     return device.updatedAt || "Waiting";
@@ -139,7 +155,8 @@ function statusTone(value: string): Tone {
     lower.includes("locked") ||
     lower.includes("dry-run") ||
     lower.includes("safe") ||
-    lower.includes("protected")
+    lower.includes("protected") ||
+    lower.includes("guarded")
   ) {
     return "safe";
   }
@@ -153,7 +170,8 @@ function statusTone(value: string): Tone {
     lower.includes("idle") ||
     lower.includes("none") ||
     lower.includes("syncing") ||
-    lower.includes("waiting")
+    lower.includes("waiting") ||
+    lower.includes("standby")
   ) {
     return "pending";
   }
@@ -163,18 +181,22 @@ function statusTone(value: string): Tone {
 
 function toneClass(tone: Tone) {
   if (tone === "live") {
-    return "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)] text-[var(--gc-text)]";
   }
 
   if (tone === "safe") {
-    return "border-[color-mix(in_srgb,var(--gc-accent-2)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_12%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-accent-2)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_10%,transparent)] text-[var(--gc-text)]";
   }
 
-  if (tone === "warning" || tone === "offline") {
-    return "border-[color-mix(in_srgb,var(--gc-warn)_38%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_14%,transparent)] text-[var(--gc-text)]";
+  if (tone === "warning") {
+    return "border-[color-mix(in_srgb,var(--gc-warn)_32%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_10%,transparent)] text-[var(--gc-text)]";
   }
 
-  return "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)]";
+  if (tone === "offline") {
+    return "border-[color-mix(in_srgb,var(--gc-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_10%,transparent)] text-[var(--gc-text)]";
+  }
+
+  return "border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-black/[0.18] text-[var(--gc-soft)]";
 }
 
 function StatusDot({ status }: { status: Device["status"] }) {
@@ -193,11 +215,13 @@ function StatusDot({ status }: { status: Device["status"] }) {
 }
 
 function StatusPill({ status }: { status: Device["status"] | string }) {
+  const value = displayStatus(String(status));
+
   return (
     <span
       className={cn(
         "inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold",
-        toneClass(statusTone(status)),
+        toneClass(statusTone(String(status))),
       )}
     >
       {status === "Online" ||
@@ -207,60 +231,8 @@ function StatusPill({ status }: { status: Device["status"] | string }) {
         <StatusDot status={status as Device["status"]} />
       ) : null}
 
-      <span className="truncate">{status}</span>
+      <span className="truncate">{value}</span>
     </span>
-  );
-}
-
-function MetricTile({
-  label,
-  value,
-  detail,
-  icon: Icon,
-  tone = "live",
-}: {
-  label: string;
-  value: string;
-  detail?: string;
-  icon: LucideIcon;
-  tone?: Tone;
-}) {
-  return (
-    <div
-      className={cn(
-        "min-w-0 rounded-[22px] border p-4",
-        tone === "warning" || tone === "offline"
-          ? "border-[color-mix(in_srgb,var(--gc-warn)_32%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_10%,transparent)]"
-          : tone === "safe"
-            ? "border-[color-mix(in_srgb,var(--gc-accent-2)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_9%,transparent)]"
-            : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)]",
-      )}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--gc-muted)]">
-          {label}
-        </p>
-
-        <Icon
-          className={cn(
-            "h-4 w-4 shrink-0",
-            tone === "warning" || tone === "offline"
-              ? "text-[var(--gc-warn)]"
-              : "text-[var(--gc-accent-2)]",
-          )}
-        />
-      </div>
-
-      <p className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.65rem,2.3vw,2.6rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--gc-text)]">
-        {value}
-      </p>
-
-      {detail ? (
-        <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--gc-soft)]">
-          {detail}
-        </p>
-      ) : null}
-    </div>
   );
 }
 
@@ -268,7 +240,7 @@ function SummaryTile({
   label,
   value,
   icon: Icon,
-  tone = "live",
+  tone = "pending",
 }: {
   label: string;
   value: string | number;
@@ -278,12 +250,10 @@ function SummaryTile({
   return (
     <div
       className={cn(
-        "min-w-0 rounded-[26px] border p-5",
-        tone === "safe"
-          ? "border-[color-mix(in_srgb,var(--gc-accent-2)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_9%,transparent)]"
-          : tone === "warning" || tone === "offline"
-            ? "border-[color-mix(in_srgb,var(--gc-warn)_32%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_10%,transparent)]"
-            : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)]",
+        "min-w-0 rounded-[22px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.018)]",
+        tone === "pending"
+          ? "border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_84%,black)]"
+          : toneClass(tone),
       )}
     >
       <div className="flex items-center justify-between gap-3">
@@ -294,9 +264,52 @@ function SummaryTile({
         <Icon className="h-4 w-4 shrink-0 text-[var(--gc-accent-2)]" />
       </div>
 
-      <p className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,3vw,3.3rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--gc-text)]">
+      <p className="mt-3 text-[clamp(1.8rem,2.4vw,2.55rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--gc-text)]">
         {value}
       </p>
+    </div>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  detail,
+  icon: Icon,
+  tone = "pending",
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  icon: LucideIcon;
+  tone?: Tone;
+}) {
+  return (
+    <div
+      className={cn(
+        "min-w-0 rounded-[22px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.014)]",
+        tone === "pending"
+          ? "border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_82%,black)]"
+          : toneClass(tone),
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--gc-muted)]">
+          {label}
+        </p>
+
+        <Icon className="h-4 w-4 shrink-0 text-[var(--gc-accent-2)]" />
+      </div>
+
+      <p className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.5rem,1.9vw,2.1rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--gc-text)]">
+        {value}
+      </p>
+
+      {detail ? (
+        <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--gc-soft)]">
+          {detail}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -315,7 +328,12 @@ function HardwarePartCard({
   tone: Tone;
 }) {
   return (
-    <div className={cn("min-w-0 rounded-[22px] border p-4", toneClass(tone))}>
+    <div
+      className={cn(
+        "min-w-0 rounded-[22px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.014)]",
+        toneClass(tone),
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-[10px] font-semibold uppercase tracking-[0.2em] opacity-75">
@@ -323,7 +341,7 @@ function HardwarePartCard({
           </p>
 
           <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xl font-semibold leading-tight tracking-[-0.04em]">
-            {value}
+            {displayStatus(value)}
           </p>
 
           <p className="mt-2 line-clamp-2 text-xs leading-5 opacity-75">
@@ -331,7 +349,7 @@ function HardwarePartCard({
           </p>
         </div>
 
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/16">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--gc-border)_64%,transparent)] bg-black/18">
           <Icon className="h-4 w-4" />
         </div>
       </div>
@@ -359,7 +377,7 @@ function CopyChip({
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1200);
       }}
-      className="inline-flex max-w-full items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-black/18 px-3 py-1.5 text-xs font-semibold text-[var(--gc-soft)] transition hover:border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] hover:text-[var(--gc-text)]"
+      className="inline-flex max-w-full items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-black/18 px-3 py-1.5 text-xs font-semibold text-[var(--gc-soft)] transition hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:text-[var(--gc-text)]"
       title={label}
     >
       {copied ? (
@@ -389,7 +407,7 @@ function TextField({
   maxLength?: number;
 }) {
   return (
-    <label className="block">
+    <label className="block min-w-0">
       {label ? (
         <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
           {label}
@@ -403,12 +421,140 @@ function TextField({
         autoFocus={autoFocus}
         maxLength={maxLength}
         className={cn(
-          "w-full rounded-[20px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] px-5 text-base text-[var(--gc-text)] outline-none transition",
+          "w-full rounded-[20px] border border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-black/18 px-5 text-base text-[var(--gc-text)] outline-none transition",
           label ? "mt-3 h-12" : "h-14",
-          "placeholder:text-[var(--gc-muted)] focus:border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] focus:bg-white/[0.055] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)]",
+          "placeholder:text-[var(--gc-muted)] focus:border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] focus:bg-white/[0.045] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)]",
         )}
       />
     </label>
+  );
+}
+
+function PairingForm({
+  code,
+  setCode,
+  name,
+  setName,
+  place,
+  setPlace,
+  onPair,
+  isPairing,
+  error,
+  feedback,
+  compact = false,
+}: {
+  code: string;
+  setCode: (value: string) => void;
+  name: string;
+  setName: (value: string) => void;
+  place: string;
+  setPlace: (value: string) => void;
+  onPair: () => void;
+  isPairing: boolean;
+  error: string;
+  feedback: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <SectionBadge>{compact ? "Add node" : "Pairing"}</SectionBadge>
+
+      <h3
+        className={cn(
+          "mt-4 font-semibold leading-[0.95] tracking-[-0.07em] text-[var(--gc-text)]",
+          compact
+            ? "text-[clamp(2rem,3vw,3rem)]"
+            : "text-[clamp(2.4rem,4vw,4rem)]",
+        )}
+      >
+        {compact ? "Add another ESP32." : "Connect ESP32."}
+      </h3>
+
+      <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
+        Enter the 7-character OLED code from the ESP32 display.
+      </p>
+
+      <div className="mt-5 grid gap-4">
+        <TextField
+          label="OLED code"
+          value={code}
+          placeholder="A7K9Q2M"
+          maxLength={7}
+          autoFocus={!compact}
+          onChange={(value) =>
+            setCode(value.replace(/[^A-Za-z0-9]/g, "").slice(0, 7))
+          }
+        />
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <TextField
+            label="Device name"
+            value={name}
+            placeholder="Balcony Plant"
+            onChange={setName}
+          />
+
+          <TextField
+            label="Plant zone"
+            value={place}
+            placeholder="Balcony shelf"
+            onChange={setPlace}
+          />
+        </div>
+      </div>
+
+      {error ? (
+        <p className="mt-4 text-sm leading-6 text-[var(--gc-warn)]">
+          {error}
+        </p>
+      ) : null}
+
+      {!error && feedback ? (
+        <p className="mt-4 text-sm leading-6 text-[var(--gc-accent-2)]">
+          {feedback}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onPair}
+        disabled={isPairing}
+        className="premium-btn mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[20px] px-6 py-4 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <KeyRound className="h-[18px] w-[18px]" />
+        {isPairing ? "Pairing..." : "Pair device"}
+      </button>
+
+      {!compact ? (
+        <div className="mt-5 rounded-[24px] border border-[color-mix(in_srgb,var(--gc-accent-2)_24%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_8%,transparent)] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
+            Flow
+          </p>
+
+          <div className="mt-3 grid gap-2">
+            {[
+              "Power on ESP32",
+              "Read OLED code",
+              "Enter code here",
+              "Monitor telemetry",
+            ].map((item, index) => (
+              <div
+                key={item}
+                className="flex items-center gap-3 rounded-[16px] border border-[color-mix(in_srgb,var(--gc-border)_56%,transparent)] bg-black/16 px-3 py-2.5"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--gc-border)_64%,transparent)] bg-black/18 text-xs font-bold text-[var(--gc-accent-2)]">
+                  {index + 1}
+                </span>
+
+                <p className="text-xs leading-5 text-[var(--gc-soft)]">
+                  {item}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -437,7 +583,7 @@ function DeviceEditorModal({
       <div className="absolute inset-x-4 top-4 mx-auto w-full max-w-[720px]">
         <GlassCard className="p-6">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <SectionBadge>Edit device</SectionBadge>
 
               <h3 className="mt-4 text-4xl font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
@@ -453,7 +599,7 @@ function DeviceEditorModal({
             <button
               type="button"
               onClick={onCancel}
-              className="premium-btn-secondary flex h-11 w-11 items-center justify-center rounded-full"
+              className="premium-btn-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -481,7 +627,7 @@ function DeviceEditorModal({
               }}
             />
 
-            <div className="rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-black/16 p-4">
+            <div className="rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-black/16 p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
                 Device ID
               </p>
@@ -522,6 +668,82 @@ function DeviceEditorModal({
             >
               Save changes
             </button>
+          </div>
+        </GlassCard>
+      </div>
+    </div>
+  );
+}
+
+function PairingModal({
+  code,
+  setCode,
+  name,
+  setName,
+  place,
+  setPlace,
+  onPair,
+  isPairing,
+  error,
+  feedback,
+  onClose,
+}: {
+  code: string;
+  setCode: (value: string) => void;
+  name: string;
+  setName: (value: string) => void;
+  place: string;
+  setPlace: (value: string) => void;
+  onPair: () => void;
+  isPairing: boolean;
+  error: string;
+  feedback: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-[8px]">
+      <button
+        type="button"
+        className="absolute inset-0"
+        onClick={onClose}
+        aria-label="Close pairing modal"
+      />
+
+      <div className="absolute inset-x-4 top-4 mx-auto w-full max-w-[760px]">
+        <GlassCard className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <SectionBadge>Add ESP32</SectionBadge>
+
+              <h3 className="mt-4 text-[clamp(2.4rem,5vw,4rem)] font-semibold leading-[0.95] tracking-[-0.07em] text-[var(--gc-text)]">
+                Pair another node.
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="premium-btn-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-2">
+            <PairingForm
+              compact
+              code={code}
+              setCode={setCode}
+              name={name}
+              setName={setName}
+              place={place}
+              setPlace={setPlace}
+              onPair={onPair}
+              isPairing={isPairing}
+              error={error}
+              feedback={feedback}
+            />
           </div>
         </GlassCard>
       </div>
@@ -594,114 +816,6 @@ function ConfirmDeleteModal({
   );
 }
 
-function PairingPanel({
-  code,
-  setCode,
-  name,
-  setName,
-  place,
-  setPlace,
-  onPair,
-  isPairing,
-}: {
-  code: string;
-  setCode: (value: string) => void;
-  name: string;
-  setName: (value: string) => void;
-  place: string;
-  setPlace: (value: string) => void;
-  onPair: () => void;
-  isPairing: boolean;
-}) {
-  return (
-    <GlassCard className="overflow-hidden p-6">
-      <div className="grid gap-6 2xl:grid-cols-[1fr_0.82fr]">
-        <div>
-          <SectionBadge>Pairing</SectionBadge>
-
-          <h3 className="mt-4 max-w-[14ch] text-[clamp(2.4rem,4.2vw,4.6rem)] font-semibold leading-[0.92] tracking-[-0.08em] text-[var(--gc-text)]">
-            Connect your ESP32.
-          </h3>
-
-          <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--gc-soft)]">
-            Use the 7-character code shown on the OLED display to attach the
-            physical GreenCloud node to this workspace.
-          </p>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr]">
-            <TextField
-              label="OLED code"
-              value={code}
-              placeholder="A7K9Q2M"
-              maxLength={7}
-              autoFocus
-              onChange={(value) =>
-                setCode(value.replace(/[^A-Za-z0-9]/g, "").slice(0, 7))
-              }
-            />
-
-            <TextField
-              label="Device name"
-              value={name}
-              placeholder="Balcony Plant"
-              onChange={setName}
-            />
-
-            <div className="lg:col-span-2">
-              <TextField
-                label="Plant zone"
-                value={place}
-                placeholder="Balcony shelf"
-                onChange={setPlace}
-              />
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onPair}
-            disabled={isPairing}
-            className="premium-btn mt-5 inline-flex items-center justify-center gap-2 rounded-[20px] px-6 py-4 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <KeyRound className="h-[18px] w-[18px]" />
-            {isPairing ? "Pairing..." : "Pair device"}
-          </button>
-        </div>
-
-        <div className="rounded-[30px] border border-[color-mix(in_srgb,var(--gc-accent-2)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_10%,transparent)] p-6">
-          <KeyRound className="h-6 w-6 text-[var(--gc-accent-2)]" />
-
-          <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
-            Secure pairing flow
-          </p>
-
-          <div className="mt-5 space-y-4">
-            {[
-              "Power on the ESP32.",
-              "Read the OLED pairing code.",
-              "Enter the code while signed in.",
-              "GreenCloud links the real device to this workspace.",
-            ].map((item, index) => (
-              <div
-                key={item}
-                className="flex gap-3 rounded-[22px] border border-white/10 bg-black/16 p-4"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.045] text-xs font-bold text-[var(--gc-accent-2)]">
-                  {index + 1}
-                </span>
-
-                <p className="text-sm leading-6 text-[var(--gc-soft)]">
-                  {item}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </GlassCard>
-  );
-}
-
 function DeviceCard({
   device,
   active,
@@ -724,6 +838,7 @@ function DeviceCard({
   const sensorStatus = getSensorStatus(extra);
   const safeMode = extra.safeMode ?? true;
   const pumpEnabled = extra.pumpEnabled ?? false;
+
   const sensorFault =
     sensorStatus.toLowerCase().includes("sensor check") ||
     sensorStatus.toLowerCase().includes("no signal") ||
@@ -834,12 +949,12 @@ function DeviceCard({
   }>;
 
   return (
-    <div
+    <GlassCard
       className={cn(
-        "rounded-[30px] border p-5 transition-all duration-300",
+        "p-5",
         active
-          ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_13%,transparent)] shadow-[0_22px_52px_var(--gc-glow)]"
-          : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] hover:border-[color-mix(in_srgb,var(--gc-accent)_24%,transparent)] hover:bg-white/[0.045]",
+          ? "border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)]"
+          : "",
       )}
     >
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -856,7 +971,7 @@ function DeviceCard({
             ) : null}
           </div>
 
-          <h3 className="mt-4 max-w-[28ch] overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,3vw,3.4rem)] font-semibold leading-[0.96] tracking-[-0.06em] text-[var(--gc-text)]">
+          <h3 className="mt-4 max-w-[28ch] overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,2.5vw,2.8rem)] font-semibold leading-[0.96] tracking-[-0.06em] text-[var(--gc-text)]">
             {device.name}
           </h3>
 
@@ -929,7 +1044,9 @@ function DeviceCard({
         <MetricTile
           label="Signal"
           value={signalValue}
-          detail={telemetryReady ? "Wi-Fi strength." : "Waiting for connection."}
+          detail={
+            telemetryReady ? "Wi-Fi strength." : "Waiting for connection."
+          }
           icon={Wifi}
           tone={telemetryReady ? "live" : "pending"}
         />
@@ -937,47 +1054,15 @@ function DeviceCard({
         <MetricTile
           label="Safety"
           value={safeMode || !pumpEnabled ? "Protected" : "Live"}
-          detail={safeMode || !pumpEnabled ? "Relay locked." : "Output enabled."}
+          detail={
+            safeMode || !pumpEnabled ? "Relay locked." : "Output enabled."
+          }
           icon={ShieldCheck}
           tone={safeMode || !pumpEnabled ? "safe" : "warning"}
         />
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricTile
-          label="ADC voltage"
-          value={voltageValue}
-          detail={telemetryReady ? "Calculated voltage." : "Waiting for device."}
-          icon={Gauge}
-          tone={telemetryReady ? "safe" : "pending"}
-        />
-
-        <MetricTile
-          label="Power"
-          value={extra.power ?? "USB / Adapter"}
-          detail="Power profile."
-          icon={Power}
-          tone="safe"
-        />
-
-        <MetricTile
-          label="Last seen"
-          value={getLastSeenLabel(extra)}
-          detail="Latest update."
-          icon={RefreshCw}
-          tone={telemetryReady ? "live" : "pending"}
-        />
-
-        <MetricTile
-          label="Command"
-          value={extra.lastCommandStatus ?? "None"}
-          detail="Latest command."
-          icon={CheckCircle2}
-          tone={statusTone(extra.lastCommandStatus ?? "None")}
-        />
-      </div>
-
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {hardwareParts.map((part) => (
           <HardwarePartCard
             key={part.title}
@@ -1020,7 +1105,7 @@ function DeviceCard({
           Updated {device.updatedAt ?? "Waiting"}
         </span>
       </div>
-    </div>
+    </GlassCard>
   );
 }
 
@@ -1047,6 +1132,9 @@ export default function DevicesPage() {
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
   const [statusFilter, setStatusFilter] = useState<DeviceFilter>("All");
+  const [pairingModalOpen, setPairingModalOpen] = useState(false);
+
+  const hasDevices = devices.length > 0;
 
   const visibleDevices = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -1103,7 +1191,7 @@ export default function DevicesPage() {
 
   const newestLabel = devices[0]?.name ?? "No device";
 
-    const handlePairDevice = async () => {
+  const handlePairDevice = async () => {
     const cleanCode = pairCode.trim();
 
     if (cleanCode.length !== 7) {
@@ -1132,13 +1220,14 @@ export default function DevicesPage() {
       setPairName(DEFAULT_DEVICE_NAME);
       setPairPlace(DEFAULT_DEVICE_PLACE);
       setFeedback(`${paired.name} paired successfully.`);
+      setPairingModalOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pairing failed.");
     } finally {
       setIsPairing(false);
     }
   };
-  
+
   const confirmRemoveDevice = () => {
     if (!deleteTarget) return;
 
@@ -1152,224 +1241,157 @@ export default function DevicesPage() {
       title="GreenCloud Devices"
       subtitle="Pair ESP32 hardware, monitor live telemetry, and manage protected irrigation nodes."
     >
-      <div className="space-y-6">
-        <GlassCard className="p-6">
-          <div className="grid gap-6 2xl:grid-cols-[1.05fr_0.95fr]">
-            <div>
-              <SectionBadge>Device workspace</SectionBadge>
+      <div className="devices-page w-full min-w-0 space-y-5">
+        <GlassCard className="overflow-hidden p-0">
+          <div className="relative p-5 sm:p-6 2xl:p-7">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,color-mix(in_srgb,var(--gc-accent)_12%,transparent),transparent_34%),radial-gradient(circle_at_82%_78%,color-mix(in_srgb,var(--gc-accent-2)_8%,transparent),transparent_30%)]" />
 
-              <h2 className="mt-5 max-w-[14ch] text-[clamp(2.7rem,4.6vw,5.2rem)] font-semibold leading-[0.92] tracking-[-0.08em] text-[var(--gc-text)]">
-                Pair, rename, monitor.
-              </h2>
+            <div className="relative z-10">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <SectionBadge>Device workspace</SectionBadge>
 
-              <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--gc-soft)] sm:text-lg">
-                Connect each ESP32 through its OLED pairing code, then manage
-                device labels, sensor state, and protected irrigation commands
-                from one workspace.
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                {filterOptions.map((filter) => (
-                  <button
-                    key={String(filter)}
-                    type="button"
-                    onClick={() => setStatusFilter(filter)}
-                    className={cn(
-                      "rounded-full px-4 py-2 text-sm font-semibold",
-                      statusFilter === filter
-                        ? "premium-tab premium-tab-active"
-                        : "premium-tab",
-                    )}
-                  >
-                    {String(filter)}
-                  </button>
-                ))}
+                <div className="flex flex-wrap gap-2">
+                  <StatusPill status={`${connectedCount} devices`} />
+                  <StatusPill
+                    status={safeModeCount > 0 ? "Protected" : "Ready"}
+                  />
+                  <StatusPill status={onlineCount > 0 ? "Online" : "Standby"} />
+                </div>
               </div>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <SummaryTile label="Devices" value={connectedCount} icon={Cpu} />
+              <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(320px,0.7fr)] xl:items-center">
+                <div className="min-w-0">
+                  <h2 className="max-w-[13ch] text-[clamp(2.7rem,4.2vw,5.1rem)] font-semibold leading-[0.92] tracking-[-0.08em] text-[var(--gc-text)]">
+                    Pair, rename, monitor.
+                  </h2>
 
-              <SummaryTile
-                label="Online"
-                value={onlineCount}
-                icon={Wifi}
-                tone={onlineCount > 0 ? "live" : "pending"}
-              />
+                  <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
+                    Connect each ESP32 through its OLED pairing code, manage
+                    labels and keep protected irrigation telemetry in one
+                    polished workspace.
+                  </p>
 
-              <SummaryTile
-                label="Protected"
-                value={safeModeCount}
-                icon={Lock}
-                tone="safe"
-              />
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {filterOptions.map((filter) => (
+                      <button
+                        key={String(filter)}
+                        type="button"
+                        onClick={() => setStatusFilter(filter)}
+                        className={cn(
+                          "rounded-full px-3.5 py-2 text-sm font-semibold",
+                          statusFilter === filter
+                            ? "premium-tab premium-tab-active"
+                            : "premium-tab",
+                        )}
+                      >
+                        {String(filter)}
+                      </button>
+                    ))}
 
-              <SummaryTile
-                label="Live sensors"
-                value={liveSensorCount}
-                icon={Leaf}
-                tone={liveSensorCount > 0 ? "live" : "pending"}
-              />
+                    {hasDevices ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setError("");
+                          setFeedback("");
+                          setPairingModalOpen(true);
+                        }}
+                        className="premium-btn inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add ESP32
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SummaryTile label="Devices" value={connectedCount} icon={Cpu} />
+
+                  <SummaryTile
+                    label="Online"
+                    value={onlineCount}
+                    icon={Wifi}
+                    tone={onlineCount > 0 ? "live" : "pending"}
+                  />
+
+                  <SummaryTile
+                    label="Protected"
+                    value={safeModeCount}
+                    icon={Lock}
+                    tone="safe"
+                  />
+
+                  <SummaryTile
+                    label="Live sensors"
+                    value={liveSensorCount}
+                    icon={Leaf}
+                    tone={liveSensorCount > 0 ? "live" : "pending"}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-[24px] border border-[color-mix(in_srgb,var(--gc-border)_64%,transparent)] bg-black/16 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="premium-tab rounded-full px-3.5 py-2 text-sm">
+                    Filter: {String(statusFilter)}
+                  </span>
+
+                  <span className="premium-tab max-w-full truncate rounded-full px-3.5 py-2 text-sm">
+                    Latest: {newestLabel}
+                  </span>
+
+                  <span className="premium-tab rounded-full px-3.5 py-2 text-sm">
+                    Search: {searchQuery.trim() ? searchQuery : "Workspace"}
+                  </span>
+                </div>
+
+                <p className="mt-4 text-sm leading-7 text-[var(--gc-soft)]">
+                  {hasDevices
+                    ? "Device workspace is ready. Add another node with the Add ESP32 button or manage the selected device below."
+                    : "No paired device yet. Use the pairing panel below to connect your first ESP32 and unlock live hardware telemetry."}
+                </p>
+              </div>
             </div>
           </div>
         </GlassCard>
 
-        <PairingPanel
-          code={pairCode}
-          setCode={(value) => {
-            setPairCode(value);
-            if (error) setError("");
-          }}
-          name={pairName}
-          setName={setPairName}
-          place={pairPlace}
-          setPlace={setPairPlace}
-          onPair={handlePairDevice}
-          isPairing={isPairing}
-        />
-
-        <section className="grid gap-6 2xl:grid-cols-[0.92fr_1.08fr]">
-          <GlassCard className="p-6">
-            <SectionBadge>Selected device</SectionBadge>
-
-            <div className="mt-5 min-w-0">
-              <h3 className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2.2rem,3.6vw,4rem)] font-semibold leading-none tracking-[-0.08em] text-[var(--gc-text)]">
-                {selectedDevice.name}
-              </h3>
-
-              <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-7 text-[var(--gc-soft)]">
-                {selectedDevice.place}
-              </p>
-
-              <div className="mt-4 max-w-full">
-                <CopyChip value={selectedDevice.id} label="Copy device ID" />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <MetricTile
-                label="Moisture"
-                value={
-                  hasTelemetry(selectedDevice as DeviceExtra)
-                    ? `${selectedDevice.moisture}%`
-                    : "Waiting"
-                }
-                icon={Droplets}
-                tone={
-                  hasTelemetry(selectedDevice as DeviceExtra)
-                    ? "live"
-                    : "pending"
-                }
-              />
-
-              <MetricTile
-                label="Sensor raw"
-                value={
-                  hasTelemetry(selectedDevice as DeviceExtra)
-                    ? rawLabel((selectedDevice as DeviceExtra).rawSoil)
-                    : "—"
-                }
-                icon={Gauge}
-                tone={
-                  hasTelemetry(selectedDevice as DeviceExtra)
-                    ? "safe"
-                    : "pending"
-                }
-              />
-
-              <MetricTile
-                label="Status"
-                value={selectedDevice.status}
-                icon={CheckCircle2}
-                tone={statusTone(selectedDevice.status)}
-              />
-            </div>
+        {!hasDevices ? (
+          <GlassCard className="p-5 sm:p-6 2xl:p-7">
+            <PairingForm
+              code={pairCode}
+              setCode={(value) => {
+                setPairCode(value);
+                if (error) setError("");
+              }}
+              name={pairName}
+              setName={setPairName}
+              place={pairPlace}
+              setPlace={setPairPlace}
+              onPair={handlePairDevice}
+              isPairing={isPairing}
+              error={error}
+              feedback={feedback}
+            />
           </GlassCard>
+        ) : null}
 
-          <GlassCard className="p-6">
-            <SectionBadge>Connection status</SectionBadge>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_220px] lg:items-center">
-              <div>
-                <h3 className="text-3xl font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
-                  Real hardware pairing is active.
-                </h3>
-
-                <p className="mt-3 text-sm leading-7 text-[var(--gc-soft)]">
-                  GreenCloud only links devices that publish a valid OLED code
-                  from the ESP32 firmware.
-                </p>
-              </div>
-
-              <div className="rounded-[24px] border border-[color-mix(in_srgb,var(--gc-accent-2)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_10%,transparent)] p-5">
-                <KeyRound className="h-5 w-5 text-[var(--gc-accent-2)]" />
-
-                <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
-                  OLED code
-                </p>
-
-                <p className="mt-2 text-sm font-semibold text-[var(--gc-text)]">
-                  Enter code above
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-[24px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-black/16 p-5">
-              <p className="text-sm leading-7 text-[var(--gc-soft)]">
-                Device flow: power on ESP32 → read OLED code → pair in
-                GreenCloud → monitor telemetry and protected commands.
-              </p>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <span className="premium-tab rounded-full px-4 py-2 text-sm">
-                Filter: {String(statusFilter)}
-              </span>
-
-              <span className="premium-tab max-w-full truncate rounded-full px-4 py-2 text-sm">
-                Latest: {newestLabel}
-              </span>
-
-              {error ? (
-                <span className="text-sm text-[var(--gc-warn)]">{error}</span>
-              ) : null}
-
-              {!error && feedback ? (
-                <span className="text-sm text-[var(--gc-accent-2)]">
-                  {feedback}
-                </span>
-              ) : null}
-            </div>
-          </GlassCard>
-        </section>
-
-        {devices.length === 0 ? (
-          <GlassCard className="p-6">
-            <SectionBadge>No devices yet</SectionBadge>
-
-            <h3 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-[var(--gc-text)]">
-              Pair your first GreenCloud device.
-            </h3>
-
-            <p className="mt-4 max-w-2xl text-base leading-8 text-[var(--gc-soft)]">
-              Power on the ESP32, read the OLED code, and enter it in the
-              pairing panel above.
-            </p>
-          </GlassCard>
-        ) : visibleDevices.length === 0 ? (
-          <GlassCard className="p-6">
+        {devices.length > 0 && visibleDevices.length === 0 ? (
+          <GlassCard className="p-6 sm:p-7">
             <SectionBadge>Empty filter</SectionBadge>
 
-            <h3 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-[var(--gc-text)]">
+            <h3 className="mt-5 text-4xl font-semibold tracking-[-0.05em] text-[var(--gc-text)]">
               No device matches this view.
             </h3>
 
             <p className="mt-4 max-w-2xl text-base leading-8 text-[var(--gc-soft)]">
-              Change the search or status filter.
+              Change the search or status filter to show paired devices.
             </p>
           </GlassCard>
-        ) : (
-          <div className="grid gap-5">
+        ) : null}
+
+        {visibleDevices.length > 0 ? (
+          <section className="grid gap-5">
             {visibleDevices.map((device) => (
               <DeviceCard
                 key={device.id}
@@ -1388,8 +1410,57 @@ export default function DevicesPage() {
                 }}
               />
             ))}
-          </div>
-        )}
+          </section>
+        ) : !hasDevices ? (
+          <GlassCard className="p-5 sm:p-6">
+            <SectionBadge>No devices yet</SectionBadge>
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
+              <div className="min-w-0">
+                <h3 className="text-[clamp(2.2rem,4vw,4rem)] font-semibold leading-[0.92] tracking-[-0.08em] text-[var(--gc-text)]">
+                  Pair your first GreenCloud device.
+                </h3>
+
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
+                  Power on the ESP32, read the OLED code on the display, and
+                  enter it above. After pairing, this area becomes a live device
+                  command center.
+                </p>
+              </div>
+
+              <div className="rounded-[26px] border border-[color-mix(in_srgb,var(--gc-accent-2)_26%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_8%,transparent)] p-5">
+                <KeyRound className="h-6 w-6 text-[var(--gc-accent-2)]" />
+
+                <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
+                  Pairing ready
+                </p>
+
+                <p className="mt-3 text-xl font-semibold tracking-[-0.04em] text-[var(--gc-text)]">
+                  Waiting for OLED code
+                </p>
+              </div>
+            </div>
+          </GlassCard>
+        ) : null}
+
+        {pairingModalOpen ? (
+          <PairingModal
+            code={pairCode}
+            setCode={(value) => {
+              setPairCode(value);
+              if (error) setError("");
+            }}
+            name={pairName}
+            setName={setPairName}
+            place={pairPlace}
+            setPlace={setPairPlace}
+            onPair={handlePairDevice}
+            isPairing={isPairing}
+            error={error}
+            feedback={feedback}
+            onClose={() => setPairingModalOpen(false)}
+          />
+        ) : null}
 
         {editingDevice ? (
           <DeviceEditorModal

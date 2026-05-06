@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import {
   AlertTriangle,
@@ -24,6 +25,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+
 import AppShell from "@/components/layout/app-shell";
 import GlassCard from "@/components/shared/glass-card";
 import SectionBadge from "@/components/shared/section-badge";
@@ -253,7 +255,7 @@ function SummaryTile({
         </div>
       </div>
 
-      <p className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.75rem,2.5vw,2.75rem)] font-semibold leading-none tracking-[-0.06em]">
+      <p className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.7rem,2.3vw,2.65rem)] font-semibold leading-none tracking-[-0.06em]">
         {value}
       </p>
 
@@ -476,16 +478,85 @@ function PreviewRow({
   );
 }
 
+function EmptyAutomationState() {
+  return (
+    <div className="mx-auto w-full max-w-[1480px] min-w-0">
+      <GlassCard className="p-6 sm:p-7 xl:p-8">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
+          <div className="min-w-0">
+            <SectionBadge>Automation unavailable</SectionBadge>
+
+            <h2 className="mt-5 text-[clamp(2.6rem,5vw,4.8rem)] font-semibold leading-[0.92] tracking-[-0.08em] text-[var(--gc-text)]">
+              Pair a device first.
+            </h2>
+
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
+              Automation depends on a selected GreenCloud node. First pair your
+              ESP32 from the Devices page, then come back here to manage rule
+              thresholds, cooldown windows and protected watering commands.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/devices"
+                className="premium-btn inline-flex items-center gap-2 rounded-[20px] px-5 py-3 text-sm font-semibold"
+              >
+                <KeyRound className="h-4 w-4" />
+                Go to Devices
+              </Link>
+
+              <span className="premium-tab rounded-full px-4 py-2 text-sm">
+                No selected node
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-[26px] border border-[color-mix(in_srgb,var(--gc-accent-2)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_10%,transparent)] p-5">
+            <ShieldCheck className="h-6 w-6 text-[var(--gc-accent-2)]" />
+
+            <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
+              Protected state
+            </p>
+
+            <p className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--gc-text)]">
+              Waiting for paired hardware
+            </p>
+
+            <p className="mt-3 text-sm leading-7 text-[var(--gc-soft)]">
+              The automation layer stays visible but inactive until a device is
+              paired and selected.
+            </p>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
 export default function AutomationPage() {
   const {
     automation,
     selectedDevice,
+    devices,
     updateAutomation,
     resetAutomation,
     startIrrigation,
   } = useAppState();
 
-  const selectedExtra = selectedDevice as DeviceExtra;
+  const activeDevice = selectedDevice ?? devices?.[0];
+
+  if (!activeDevice) {
+    return (
+      <AppShell
+        title="GreenCloud Automation"
+        subtitle="Smart watering logic, protected commands, and real ESP32 state."
+      >
+        <EmptyAutomationState />
+      </AppShell>
+    );
+  }
+
+  const selectedExtra = activeDevice as DeviceExtra;
 
   const telemetryReady = hasTelemetry(selectedExtra);
 
@@ -514,18 +585,17 @@ export default function AutomationPage() {
   const lastCommandStatus = selectedExtra.lastCommandStatus ?? "None";
 
   const canWaterByThreshold =
-    telemetryReady && selectedDevice.moisture <= automation.moistureThreshold;
+    telemetryReady && activeDevice.moisture <= automation.moistureThreshold;
 
   const automaticArmed =
     automation.mode === "Automatic" && automation.autoIrrigationEnabled;
 
   const sensorBlocked =
-    selectedDevice.status === "Offline" ||
+    activeDevice.status === "Offline" ||
     sensorStatus.toLowerCase().includes("sensor check") ||
     sensorStatus.toLowerCase().includes("no signal");
 
   const rainBlocked = rainStatus === "Detected";
-
   const tankBlocked =
     waterLevelStatus === "Low" || waterLevelStatus === "Empty";
 
@@ -566,98 +636,101 @@ export default function AutomationPage() {
         ? "warning"
         : "live";
 
-  const moistureLabel = telemetryReady
-    ? `${selectedDevice.moisture}%`
-    : "Waiting";
+  const moistureLabel = telemetryReady ? `${activeDevice.moisture}%` : "Waiting";
 
   return (
     <AppShell
       title="GreenCloud Automation"
       subtitle="Smart watering logic, protected commands, and real ESP32 state."
     >
-      <div className="space-y-6">
-        <GlassCard className="p-6">
-          <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)] 2xl:items-start">
-            <div className="min-w-0">
-              <SectionBadge>Smart irrigation layer</SectionBadge>
+      <div className="mx-auto w-full max-w-[1680px] min-w-0 space-y-5">
+        <GlassCard className="overflow-hidden p-0">
+          <div className="relative p-5 sm:p-6 xl:p-7 2xl:p-8">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,color-mix(in_srgb,var(--gc-accent)_10%,transparent),transparent_34%),radial-gradient(circle_at_85%_78%,color-mix(in_srgb,var(--gc-accent-2)_8%,transparent),transparent_30%)]" />
 
-              <h2 className="mt-5 max-w-[12ch] text-[clamp(2.7rem,4.5vw,5.2rem)] font-semibold leading-[0.9] tracking-[-0.08em] text-[var(--gc-text)]">
-                Rules decide. Hardware stays safe.
-              </h2>
+            <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.9fr)] xl:items-start">
+              <div className="min-w-0">
+                <SectionBadge>Smart irrigation layer</SectionBadge>
 
-              <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--gc-soft)] sm:text-lg">
-                GreenCloud watches the selected ESP32 node, evaluates watering
-                rules, and keeps the pump channel protected until the hardware
-                layer is ready.
-              </p>
+                <h2 className="mt-5 max-w-[12ch] text-[clamp(2.8rem,4.4vw,5rem)] font-semibold leading-[0.9] tracking-[-0.08em] text-[var(--gc-text)]">
+                  Rules decide. Hardware stays safe.
+                </h2>
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <StatusPill label="Live rule engine" tone="live" />
-                <StatusPill
-                  label={safeModeActive ? "Protected pump" : "Pump enabled"}
-                  tone={safeModeActive ? "safe" : "warning"}
-                />
-                <StatusPill label={relayState} />
-                <StatusPill label={lastCommandStatus} />
+                <p className="mt-5 max-w-3xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
+                  GreenCloud watches the selected ESP32 node, evaluates
+                  watering rules, and keeps the pump channel protected until
+                  the hardware layer is ready.
+                </p>
+
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <StatusPill label={activeDevice.name} tone="live" />
+                  <StatusPill label="Live rule engine" tone="live" />
+                  <StatusPill
+                    label={safeModeActive ? "Protected pump" : "Pump enabled"}
+                    tone={safeModeActive ? "safe" : "warning"}
+                  />
+                  <StatusPill label={relayState} />
+                  <StatusPill label={lastCommandStatus} />
+                </div>
               </div>
-            </div>
 
-            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-              <SummaryTile
-                label="Mode"
-                value={automation.mode}
-                detail={
-                  automaticArmed
-                    ? "Automatic rules are active."
-                    : "Manual control is active."
-                }
-                icon={SlidersHorizontal}
-                tone={automaticArmed ? "live" : "pending"}
-              />
+              <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+                <SummaryTile
+                  label="Mode"
+                  value={automation.mode}
+                  detail={
+                    automaticArmed
+                      ? "Automatic rules are active."
+                      : "Manual control is active."
+                  }
+                  icon={SlidersHorizontal}
+                  tone={automaticArmed ? "live" : "pending"}
+                />
 
-              <SummaryTile
-                label="Decision"
-                value={decision}
-                detail={
-                  telemetryReady
-                    ? `${selectedDevice.moisture}% soil moisture against ${automation.moistureThreshold}% limit.`
-                    : "Waiting for the next device signal."
-                }
-                icon={Gauge}
-                tone={decisionTone}
-              />
+                <SummaryTile
+                  label="Decision"
+                  value={decision}
+                  detail={
+                    telemetryReady
+                      ? `${activeDevice.moisture}% soil moisture against ${automation.moistureThreshold}% limit.`
+                      : "Waiting for the next device signal."
+                  }
+                  icon={Gauge}
+                  tone={decisionTone}
+                />
 
-              <SummaryTile
-                label="Output"
-                value={commandResult}
-                detail={
-                  physicalPumpLocked
-                    ? "Command is recorded without pump output."
-                    : "Pump channel is available."
-                }
-                icon={Droplets}
-                tone={commandTone}
-              />
+                <SummaryTile
+                  label="Output"
+                  value={commandResult}
+                  detail={
+                    physicalPumpLocked
+                      ? "Command is recorded without pump output."
+                      : "Pump channel is available."
+                  }
+                  icon={Droplets}
+                  tone={commandTone}
+                />
 
-              <SummaryTile
-                label="Cooldown"
-                value={`${automation.cooldownMinutes}m`}
-                detail="Minimum pause between cycles."
-                icon={TimerReset}
-                tone="safe"
-              />
+                <SummaryTile
+                  label="Cooldown"
+                  value={`${automation.cooldownMinutes}m`}
+                  detail="Minimum pause between cycles."
+                  icon={TimerReset}
+                  tone="safe"
+                />
+              </div>
             </div>
           </div>
         </GlassCard>
 
-        <section className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)]">
-          <div className="min-w-0 space-y-6">
-            <GlassCard className="min-w-0 p-6">
+        <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.12fr)_360px] 2xl:grid-cols-[minmax(0,1.18fr)_390px]">
+          <div className="min-w-0 space-y-5">
+            <GlassCard className="min-w-0 p-5 sm:p-6 xl:p-7">
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
+                <div className="min-w-0">
                   <SectionBadge>Rule editor</SectionBadge>
 
-                  <h3 className="mt-4 text-[clamp(2.1rem,3vw,3.3rem)] font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
+                  <h3 className="mt-4 text-[clamp(2rem,2.8vw,3.1rem)] font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
                     Tune watering behavior
                   </h3>
                 </div>
@@ -771,7 +844,7 @@ export default function AutomationPage() {
                   />
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr]">
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(160px,1fr)_minmax(160px,1fr)]">
                   <SwitchCard
                     title="Quiet hours"
                     description="Pauses automatic watering during the selected time window."
@@ -809,12 +882,12 @@ export default function AutomationPage() {
               </div>
             </GlassCard>
 
-            <GlassCard className="p-6">
+            <GlassCard className="p-5 sm:p-6 xl:p-7">
               <div className="grid gap-5">
                 <div className="min-w-0">
                   <SectionBadge>Automation summary</SectionBadge>
 
-                  <h3 className="mt-4 text-[clamp(2rem,3vw,3.2rem)] font-semibold leading-[0.95] tracking-[-0.06em] text-[var(--gc-text)]">
+                  <h3 className="mt-4 text-[clamp(2rem,2.8vw,3rem)] font-semibold leading-[0.95] tracking-[-0.06em] text-[var(--gc-text)]">
                     Smart rules are ready. Hardware output stays protected.
                   </h3>
 
@@ -871,18 +944,18 @@ export default function AutomationPage() {
             </GlassCard>
           </div>
 
-          <div className="min-w-0 space-y-6">
-            <GlassCard className="p-6">
+          <aside className="min-w-0 space-y-5 xl:sticky xl:top-6">
+            <GlassCard className="p-5 sm:p-6">
               <SectionBadge>Node preview</SectionBadge>
 
-              <h3 className="mt-5 text-[clamp(1.9rem,2.7vw,2.8rem)] font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
+              <h3 className="mt-5 text-[clamp(1.85rem,2.5vw,2.7rem)] font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
                 Current device state
               </h3>
 
               <div className="mt-6 space-y-3">
                 <PreviewRow
                   label="Device"
-                  value={selectedDevice.name}
+                  value={activeDevice.name}
                   tone="live"
                 />
 
@@ -931,7 +1004,7 @@ export default function AutomationPage() {
 
               <button
                 type="button"
-                onClick={() => startIrrigation(selectedDevice.id)}
+                onClick={() => startIrrigation(activeDevice.id)}
                 className="premium-btn mt-6 w-full rounded-[20px] px-5 py-4 text-base font-semibold"
               >
                 {physicalPumpLocked
@@ -945,7 +1018,7 @@ export default function AutomationPage() {
               </p>
             </GlassCard>
 
-            <GlassCard className="p-6">
+            <GlassCard className="p-5 sm:p-6">
               <SectionBadge>Secure command channel</SectionBadge>
 
               <div className="mt-5 rounded-[24px] border border-[color-mix(in_srgb,var(--gc-accent-2)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_10%,transparent)] p-5">
@@ -956,7 +1029,7 @@ export default function AutomationPage() {
                 </p>
 
                 <p className="mt-2 break-all text-sm font-semibold text-[var(--gc-text)]">
-                  {selectedDevice.id}
+                  {activeDevice.id}
                 </p>
 
                 <p className="mt-4 text-sm leading-7 text-[var(--gc-soft)]">
@@ -966,19 +1039,19 @@ export default function AutomationPage() {
               </div>
             </GlassCard>
 
-            <GlassCard className="p-6">
+            <GlassCard className="p-5 sm:p-6">
               <SectionBadge>Protection stack</SectionBadge>
 
               <div className="mt-5 grid gap-3">
                 <SafetyCard
                   title="ESP32"
-                  value={selectedDevice.status}
+                  value={activeDevice.status}
                   description={`Last signal: ${getLastSeenLabel(selectedExtra)}.`}
                   icon={Cpu}
                   tone={
-                    selectedDevice.status === "Online"
+                    activeDevice.status === "Online"
                       ? "live"
-                      : selectedDevice.status === "Offline"
+                      : activeDevice.status === "Offline"
                         ? "offline"
                         : "pending"
                   }
@@ -1047,7 +1120,7 @@ export default function AutomationPage() {
                 />
               </div>
             </GlassCard>
-          </div>
+          </aside>
         </section>
       </div>
     </AppShell>

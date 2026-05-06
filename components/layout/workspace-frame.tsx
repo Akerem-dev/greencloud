@@ -31,22 +31,22 @@ type WorkspaceFrameProps = {
 
 function getToneClass(tone: Tone) {
   if (tone === "live") {
-    return "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_13%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)] text-[var(--gc-text)]";
   }
 
   if (tone === "safe") {
-    return "border-[color-mix(in_srgb,var(--gc-accent-2)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_12%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-accent-2)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_10%,transparent)] text-[var(--gc-text)]";
   }
 
   if (tone === "warning") {
-    return "border-[color-mix(in_srgb,var(--gc-warn)_38%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_14%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-warn)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_11%,transparent)] text-[var(--gc-text)]";
   }
 
   if (tone === "offline") {
-    return "border-[color-mix(in_srgb,var(--gc-danger)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_12%,transparent)] text-[var(--gc-text)]";
+    return "border-[color-mix(in_srgb,var(--gc-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_10%,transparent)] text-[var(--gc-text)]";
   }
 
-  return "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)]";
+  return "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_68%,transparent)] text-[var(--gc-soft)]";
 }
 
 function getStatusTone(status: string): Tone {
@@ -93,25 +93,31 @@ function getStatusTone(status: string): Tone {
     return "warning";
   }
 
-  if (
-    lower.includes("waiting") ||
-    lower.includes("idle") ||
-    lower.includes("pending") ||
-    lower.includes("syncing") ||
-    lower.includes("none")
-  ) {
-    return "pending";
-  }
-
   return "pending";
 }
 
 function displayStatus(value: string) {
   const lower = value.toLowerCase();
 
-  if (lower === "dry-run" || lower === "locked") return "Protected";
-  if (lower === "none") return "No command";
-  if (lower === "pending") return "Waiting";
+  if (lower === "dry-run" || lower === "locked" || lower === "safe") {
+    return "Protected";
+  }
+
+  if (lower === "none" || lower === "pending") {
+    return "Ready";
+  }
+
+  if (lower === "idle") {
+    return "Standby";
+  }
+
+  if (lower === "handled") {
+    return "Completed";
+  }
+
+  if (lower === "sensor check") {
+    return "Calibrating";
+  }
 
   return value;
 }
@@ -147,9 +153,9 @@ export function MetricTile({
   return (
     <div
       className={cn(
-        "min-w-0 rounded-[22px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]",
+        "min-w-0 rounded-[22px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.018)]",
         tone === "pending"
-          ? "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)]"
+          ? "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-panel-2)_52%,transparent),color-mix(in_srgb,var(--gc-panel)_46%,transparent))]"
           : getToneClass(tone),
         className,
       )}
@@ -174,23 +180,23 @@ export function MetricTile({
 export function PageSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="h-28 animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-white/[0.03]" />
+      <div className="h-28 animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_54%,transparent)]" />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="space-y-6">
-          <div className="h-[260px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-white/[0.03]" />
-          <div className="h-[360px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-white/[0.03]" />
+          <div className="h-[260px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_54%,transparent)]" />
+          <div className="h-[360px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_54%,transparent)]" />
         </div>
 
         <div className="space-y-6">
-          <div className="h-[240px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-white/[0.03]" />
+          <div className="h-[240px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_54%,transparent)]" />
 
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="h-[240px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-white/[0.03]" />
-            <div className="h-[240px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-white/[0.03]" />
+            <div className="h-[240px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_54%,transparent)]" />
+            <div className="h-[240px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_54%,transparent)]" />
           </div>
 
-          <div className="h-[320px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-white/[0.03]" />
+          <div className="h-[320px] animate-pulse rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_54%,transparent)]" />
         </div>
       </div>
     </div>

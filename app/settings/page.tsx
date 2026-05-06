@@ -29,6 +29,7 @@ import {
   Wind,
   type LucideIcon,
 } from "lucide-react";
+
 import AppShell from "@/components/layout/app-shell";
 import GlassCard from "@/components/shared/glass-card";
 import SectionBadge from "@/components/shared/section-badge";
@@ -134,6 +135,12 @@ const notificationModes: Array<{
     description: "Show every workspace event.",
   },
 ];
+
+function toTitleCase(value: string) {
+  return value
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 function hasTelemetry(device: DeviceExtra) {
   return (
@@ -295,7 +302,7 @@ function ChoiceCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "min-w-0 rounded-[24px] border p-4 text-left transition",
+        "min-w-0 rounded-[24px] border p-4 text-left transition duration-300",
         active
           ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_18px_40px_var(--gc-glow)]"
           : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06]",
@@ -618,6 +625,14 @@ export default function SettingsPage() {
 
   const signalLabel = telemetryReady ? `${selectedDevice.signal}%` : "Waiting";
 
+  const activeThemeLabel =
+    themes.find((theme) => theme.value === settings.themePreset)?.label ??
+    toTitleCase(settings.themePreset);
+
+  const activeAmbienceLabel =
+    ambiences.find((item) => item.value === settings.ambienceMode)?.label ??
+    toTitleCase(settings.ambienceMode);
+
   return (
     <AppShell
       title="GreenCloud Settings"
@@ -629,7 +644,7 @@ export default function SettingsPage() {
             <div className="min-w-0">
               <SectionBadge>System configuration</SectionBadge>
 
-              <h2 className="mt-5 max-w-[14ch] text-[clamp(2.4rem,4.2vw,4.6rem)] font-semibold leading-[0.9] tracking-[-0.08em] text-[var(--gc-text)]">
+              <h2 className="mt-5 max-w-[14ch] text-[clamp(2.4rem,4.2vw,4.9rem)] font-semibold leading-[0.9] tracking-[-0.08em] text-[var(--gc-text)]">
                 Settings for the final GreenCloud system.
               </h2>
 
@@ -655,7 +670,7 @@ export default function SettingsPage() {
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               <SummaryTile
                 label="Theme"
-                value={settings.themePreset}
+                value={activeThemeLabel}
                 detail="Current visual preset."
                 icon={Sparkles}
                 tone="safe"
@@ -663,7 +678,7 @@ export default function SettingsPage() {
 
               <SummaryTile
                 label="Ambience"
-                value={settings.leafAmbience ? settings.ambienceMode : "calm"}
+                value={settings.leafAmbience ? activeAmbienceLabel : "Calm"}
                 detail="Background effect."
                 icon={Leaf}
                 tone="pending"
@@ -776,7 +791,7 @@ export default function SettingsPage() {
                       updateSetting("leafAmbience", ambience.value !== "calm");
                     }}
                     className={cn(
-                      "flex min-w-0 items-center gap-3 rounded-[24px] border p-4 text-left transition",
+                      "flex min-w-0 items-center gap-3 rounded-[24px] border p-4 text-left transition duration-300",
                       active
                         ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_24px_var(--gc-glow)]"
                         : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:bg-white/[0.06]",

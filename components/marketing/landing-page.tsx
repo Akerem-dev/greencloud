@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowRight,
   Bell,
   CheckCircle2,
   CloudRain,
@@ -12,22 +13,19 @@ import {
   Gauge,
   Leaf,
   Lock,
-  Monitor,
-  Power,
   Radio,
   RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   Sprout,
-  ToggleLeft,
-  Umbrella,
   UserRound,
-  Waves,
   Wifi,
   X,
   Zap,
   type LucideIcon,
 } from "lucide-react";
+
 import {
   type AmbienceMode,
   type ThemePreset,
@@ -49,15 +47,6 @@ type ToastItem = {
   tone: ToastTone;
 };
 
-type Capability = {
-  id: string;
-  kicker: string;
-  title: string;
-  description: string;
-  points: string[];
-  icon: LucideIcon;
-};
-
 type Tone = "live" | "safe" | "pending" | "warning" | "offline";
 
 type LandingDeviceExtra = {
@@ -75,7 +64,22 @@ type LandingDeviceExtra = {
   firmware?: string;
   lastSeenMs?: number;
   lastCommandStatus?: string;
+  updatedAt?: string;
   power?: string;
+};
+
+type ProductPillar = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  tone: Tone;
+};
+
+type SystemStep = {
+  label: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
 };
 
 const themes: Array<{ label: string; value: ThemePreset }> = [
@@ -96,71 +100,67 @@ const ambiences: Array<{ label: string; value: AmbienceMode }> = [
   { label: "Calm", value: "calm" },
 ];
 
-const capabilities: Capability[] = [
+const productPillars: ProductPillar[] = [
   {
-    id: "esp32",
-    kicker: "ESP32 live node",
-    title: "Plant zone sends real telemetry.",
+    title: "Private pairing",
     description:
-      "ESP32 reads the soil sensor, keeps the OLED updated, and writes live plant data into the GreenCloud Firebase workspace.",
-    points: [
-      "Capacitive soil sensor AO value is mapped into moisture percentage.",
-      "OLED can show Wi-Fi, Firebase, RAW and moisture state.",
-      "Dashboard, devices and landing page read the same selected device.",
-    ],
+      "Pair each ESP32 with an OLED code and keep every device under your private account.",
+    icon: ShieldCheck,
+    tone: "safe",
+  },
+  {
+    title: "Live telemetry",
+    description:
+      "Track soil moisture, signal state and device activity from one polished dashboard.",
+    icon: Wifi,
+    tone: "live",
+  },
+  {
+    title: "Protected irrigation",
+    description:
+      "Send irrigation commands while relay and pump output stay guarded by default.",
+    icon: Lock,
+    tone: "safe",
+  },
+  {
+    title: "Expandable hardware",
+    description:
+      "Add rain, tank level, OLED and button inputs without breaking the workspace flow.",
+    icon: CloudRain,
+    tone: "pending",
+  },
+];
+
+const systemSteps: SystemStep[] = [
+  {
+    label: "01",
+    title: "ESP32 reads the plant",
+    description: "Soil and hardware states are prepared on the controller.",
     icon: Cpu,
   },
   {
-    id: "firebase",
-    kicker: "Private Firebase workspace",
-    title: "Every user keeps a separated device workspace.",
-    description:
-      "Authentication and Realtime Database keep GreenCloud device data under the signed-in account instead of mixing workspaces.",
-    points: [
-      "Login/register protects the control dashboard.",
-      "Devices are stored per user workspace.",
-      "Paired ESP32 nodes stay attached to the correct account.",
-    ],
+    label: "02",
+    title: "Firebase syncs data",
+    description: "Device state, user profile and commands stay private.",
     icon: Radio,
   },
   {
-    id: "automation",
-    kicker: "Rule engine",
-    title: "Moisture threshold controls irrigation decisions.",
-    description:
-      "Automation settings define the dry-risk point, cooldown window and pump command duration while the firmware still protects physical output.",
-    points: [
-      "Moisture threshold marks dry-risk state.",
-      "Cooldown prevents repeated watering commands.",
-      "Pump duration is sent as a command, not forced blindly.",
-    ],
+    label: "03",
+    title: "Dashboard shows health",
+    description: "Moisture, signal and protection state become readable.",
     icon: Gauge,
   },
   {
-    id: "safety",
-    kicker: "Pump protection",
-    title: "Commands can be tested without unsafe actuation.",
-    description:
-      "GreenCloud can send irrigation commands while the firmware keeps relay and pump output protected until hardware wiring is safe.",
-    points: [
-      "Protected commands verify the full software chain.",
-      "Relay output stays guarded while safe-mode is active.",
-      "Pump can remain dry-run until final wiring is confirmed.",
-    ],
-    icon: Lock,
+    label: "04",
+    title: "Automation decides",
+    description: "Threshold, cooldown and duration rules shape irrigation.",
+    icon: SlidersHorizontal,
   },
   {
-    id: "sensors",
-    kicker: "Expandable protection sensors",
-    title: "Rain, tank and button states are ready.",
-    description:
-      "The interface already models rain detection, float water-level protection and local button input for the completed hardware stage.",
-    points: [
-      "Rain sensor can block unnecessary watering.",
-      "Float sensor can prevent dry pump operation.",
-      "KY-004 button can trigger local manual events.",
-    ],
-    icon: CloudRain,
+    label: "05",
+    title: "Pump stays protected",
+    description: "Relay output remains guarded until hardware mode is ready.",
+    icon: Lock,
   },
 ];
 
@@ -183,36 +183,15 @@ function hasTelemetry(device: {
   );
 }
 
-function rawLabel(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value)
-    ? String(value)
-    : "—";
-}
+function displayStatus(value: string) {
+  const lower = value.toLowerCase();
 
-function voltageLabel(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value)
-    ? `${value.toFixed(2)}V`
-    : "—";
-}
+  if (lower === "dry-run" || lower === "locked") return "Protected";
+  if (lower === "none" || lower === "pending") return "Ready";
+  if (lower === "idle") return "Standby";
+  if (lower === "ok") return "Safe";
 
-function getToneClass(tone: Tone) {
-  if (tone === "live") {
-    return "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_13%,transparent)] text-[var(--gc-text)]";
-  }
-
-  if (tone === "safe") {
-    return "border-[color-mix(in_srgb,var(--gc-accent-2)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_12%,transparent)] text-[var(--gc-text)]";
-  }
-
-  if (tone === "warning") {
-    return "border-[color-mix(in_srgb,var(--gc-warn)_38%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_14%,transparent)] text-[var(--gc-text)]";
-  }
-
-  if (tone === "offline") {
-    return "border-[color-mix(in_srgb,var(--gc-danger)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_12%,transparent)] text-[var(--gc-text)]";
-  }
-
-  return "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)]";
+  return value;
 }
 
 function statusTone(value: string): Tone {
@@ -258,42 +237,39 @@ function statusTone(value: string): Tone {
     return "warning";
   }
 
-  if (
-    lower.includes("pending") ||
-    lower.includes("idle") ||
-    lower.includes("none") ||
-    lower.includes("syncing") ||
-    lower.includes("waiting")
-  ) {
-    return "pending";
-  }
-
   return "pending";
 }
 
-function displayStatus(value: string) {
-  const lower = value.toLowerCase();
+function toneClass(tone: Tone) {
+  if (tone === "live") {
+    return "border-[color-mix(in_srgb,var(--gc-accent)_32%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)] text-[var(--gc-text)]";
+  }
 
-  if (lower === "dry-run" || lower === "locked") return "Protected";
-  if (lower === "none") return "No command";
-  if (lower === "pending") return "Waiting";
+  if (tone === "safe") {
+    return "border-[color-mix(in_srgb,var(--gc-accent-2)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_9%,transparent)] text-[var(--gc-text)]";
+  }
 
-  return value;
+  if (tone === "warning") {
+    return "border-[color-mix(in_srgb,var(--gc-warn)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_10%,transparent)] text-[var(--gc-text)]";
+  }
+
+  if (tone === "offline") {
+    return "border-[color-mix(in_srgb,var(--gc-danger)_32%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_10%,transparent)] text-[var(--gc-text)]";
+  }
+
+  return "border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_68%,black)] text-[var(--gc-soft)]";
 }
 
 function getSensorStatus(device: LandingDeviceExtra & { status?: string }) {
   if (device.sensorStatus) return device.sensorStatus;
   if (device.status === "Offline") return "No signal";
   if (device.status === "Syncing") return "Syncing";
-  return "Pending";
+  return "Ready";
 }
 
-function getLastSeenLabel(device: {
-  lastSeenMs?: number;
-  updatedAt?: string;
-}) {
+function getLastSeenLabel(device: LandingDeviceExtra) {
   if (typeof device.lastSeenMs !== "number") {
-    return device.updatedAt || "Waiting";
+    return device.updatedAt || "Ready for pairing";
   }
 
   if (device.lastSeenMs > 1_000_000_000_000) {
@@ -314,19 +290,22 @@ function getLastSeenLabel(device: {
 function StatusPill({
   label,
   tone,
+  icon: Icon,
 }: {
   label: string;
   tone?: Tone;
+  icon?: LucideIcon;
 }) {
   const visibleLabel = displayStatus(label);
 
   return (
     <span
       className={cn(
-        "inline-flex max-w-full rounded-full border px-3 py-1.5 text-xs font-semibold",
-        getToneClass(tone ?? statusTone(visibleLabel)),
+        "inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold",
+        toneClass(tone ?? statusTone(visibleLabel)),
       )}
     >
+      {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
       <span className="truncate">{visibleLabel}</span>
     </span>
   );
@@ -349,7 +328,7 @@ function ChoiceButton({
         "rounded-full border px-4 py-2 text-sm font-semibold transition",
         active
           ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_24px_var(--gc-glow)]"
-          : "border-[color-mix(in_srgb,var(--gc-border)_90%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
+          : "border-[color-mix(in_srgb,var(--gc-border)_76%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
       )}
     >
       {label}
@@ -357,81 +336,113 @@ function ChoiceButton({
   );
 }
 
-function MiniStatCard({
-  label,
-  value,
-  description,
-  icon: Icon,
+function SoftPanel({
+  children,
+  className,
   tone = "pending",
 }: {
-  label: string;
-  value: string;
-  description: string;
-  icon: LucideIcon;
+  children: React.ReactNode;
+  className?: string;
   tone?: Tone;
 }) {
   return (
     <div
       className={cn(
-        "min-w-0 rounded-[24px] border p-5",
+        "relative min-w-0 overflow-hidden rounded-[26px] border p-5",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]",
         tone === "pending"
-          ? "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)]"
-          : getToneClass(tone),
+          ? "border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-bg)_70%,black),color-mix(in_srgb,var(--gc-bg)_84%,black))]"
+          : toneClass(tone),
+        className,
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.24em] opacity-75">
-          {label}
-        </p>
-        <Icon className="h-[18px] w-[18px] shrink-0" />
-      </div>
-
-      <p className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.85rem,3vw,2.75rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--gc-text)]">
-        {displayStatus(value)}
-      </p>
-
-      <p className="mt-3 line-clamp-2 text-sm leading-6 opacity-75">
-        {description}
-      </p>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_0%,rgba(255,255,255,0.06),transparent_36%)]" />
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
 
-function HardwareCard({
-  title,
+function ProductMetric({
+  label,
   value,
+  detail,
+  icon: Icon,
+  tone = "pending",
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  icon: LucideIcon;
+  tone?: Tone;
+}) {
+  return (
+    <SoftPanel tone={tone} className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.24em] opacity-75">
+          {label}
+        </p>
+
+        <Icon className="h-[18px] w-[18px] shrink-0" />
+      </div>
+
+      <p className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.45rem,2.4vw,2.2rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--gc-text)]">
+        {displayStatus(value)}
+      </p>
+
+      <p className="mt-3 line-clamp-2 text-sm leading-6 opacity-75">
+        {detail}
+      </p>
+    </SoftPanel>
+  );
+}
+
+function ProductPillarCard({
+  title,
   description,
   icon: Icon,
   tone,
-}: {
-  title: string;
-  value: string;
-  description: string;
-  icon: LucideIcon;
-  tone: Tone;
-}) {
+}: ProductPillar) {
   return (
-    <div className={cn("min-w-0 rounded-[24px] border p-5", getToneClass(tone))}>
+    <SoftPanel
+      tone={tone}
+      className="group p-6 transition duration-300 hover:-translate-y-1"
+    >
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/18">
+        <Icon className="h-5 w-5" />
+      </div>
+
+      <h3 className="mt-6 text-2xl font-semibold tracking-[-0.055em] text-[var(--gc-text)]">
+        {title}
+      </h3>
+
+      <p className="mt-3 text-sm leading-7 opacity-80">{description}</p>
+    </SoftPanel>
+  );
+}
+
+function SystemStepCard({ step }: { step: SystemStep }) {
+  const Icon = step.icon;
+
+  return (
+    <SoftPanel className="group p-5 transition duration-300 hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)]">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">
-            {title}
-          </p>
+        <span className="rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] px-3 py-1 text-xs font-bold text-[var(--gc-accent-2)]">
+          {step.label}
+        </span>
 
-          <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-2xl font-semibold tracking-[-0.04em]">
-            {displayStatus(value)}
-          </p>
-
-          <p className="mt-2 line-clamp-2 text-sm leading-6 opacity-75">
-            {description}
-          </p>
-        </div>
-
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/18">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/18 text-[var(--gc-accent-2)]">
           <Icon className="h-5 w-5" />
         </div>
       </div>
-    </div>
+
+      <h3 className="mt-6 text-2xl font-semibold tracking-[-0.055em] text-[var(--gc-text)]">
+        {step.title}
+      </h3>
+
+      <p className="mt-3 text-sm leading-7 text-[var(--gc-soft)]">
+        {step.description}
+      </p>
+    </SoftPanel>
   );
 }
 
@@ -465,16 +476,17 @@ function LandingSettingsPanel() {
 
       <div className="absolute inset-x-4 top-4 mx-auto w-full max-w-[760px]">
         <GlassCard className="overflow-hidden p-0">
-          <div className="border-b border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] p-6">
+          <div className="border-b border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <SectionBadge>Landing settings</SectionBadge>
+                <SectionBadge>Interface</SectionBadge>
+
                 <h3 className="mt-4 text-4xl font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
-                  Interface controls
+                  Display controls
                 </h3>
+
                 <p className="mt-3 max-w-xl text-sm leading-7 text-[var(--gc-soft)]">
-                  Theme, ambience, animation and density controls for the
-                  landing page.
+                  Tune theme, ambience, animation and layout density.
                 </p>
               </div>
 
@@ -501,7 +513,7 @@ function LandingSettingsPanel() {
           </div>
 
           <div className="gc-scrollbar max-h-[76vh] space-y-5 overflow-y-auto p-6">
-            <div className="rounded-[26px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
+            <SoftPanel>
               <p className="text-sm font-semibold text-[var(--gc-text)]">
                 Theme preset
               </p>
@@ -516,9 +528,9 @@ function LandingSettingsPanel() {
                   />
                 ))}
               </div>
-            </div>
+            </SoftPanel>
 
-            <div className="rounded-[26px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
+            <SoftPanel>
               <p className="text-sm font-semibold text-[var(--gc-text)]">
                 Ambience mode
               </p>
@@ -542,12 +554,14 @@ function LandingSettingsPanel() {
                   />
                 ))}
               </div>
-            </div>
+            </SoftPanel>
 
             <div className="grid gap-3 sm:grid-cols-3">
               <button
                 type="button"
-                onClick={() => updateSetting("animations", !settings.animations)}
+                onClick={() =>
+                  updateSetting("animations", !settings.animations)
+                }
                 className="premium-btn-secondary rounded-[24px] px-4 py-4 text-left"
               >
                 <span className="block text-sm font-semibold text-[var(--gc-text)]">
@@ -627,6 +641,7 @@ function LandingNotificationsPanel() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <SectionBadge>Notifications</SectionBadge>
+
               <h3 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
                 System alerts
               </h3>
@@ -654,24 +669,21 @@ function LandingNotificationsPanel() {
 
           <div className="gc-scrollbar mt-5 max-h-[72vh] space-y-3 overflow-y-auto pr-2">
             {notifications.length === 0 ? (
-              <div className="rounded-[24px] border border-dashed border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
+              <SoftPanel className="border-dashed">
                 <p className="text-lg font-semibold text-[var(--gc-text)]">
                   No alerts yet.
                 </p>
+
                 <p className="mt-2 text-sm leading-7 text-[var(--gc-soft)]">
-                  Dry-risk, sensor and protection events will appear here.
+                  Dry-risk, sensor and protection updates will appear here.
                 </p>
-              </div>
+              </SoftPanel>
             ) : (
               notifications.map((item) => (
-                <div
+                <SoftPanel
                   key={item.id}
-                  className={cn(
-                    "rounded-[24px] border p-4",
-                    item.read
-                      ? "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)]"
-                      : "border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] shadow-[0_0_28px_var(--gc-glow)]",
-                  )}
+                  tone={item.read ? "pending" : "live"}
+                  className={item.read ? "" : "shadow-[0_0_28px_var(--gc-glow)]"}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-[var(--gc-text)]">
@@ -688,7 +700,7 @@ function LandingNotificationsPanel() {
                   <p className="mt-2 text-sm leading-7 text-[var(--gc-soft)]">
                     {item.description || item.body}
                   </p>
-                </div>
+                </SoftPanel>
               ))
             )}
           </div>
@@ -718,6 +730,7 @@ function LandingToastStack({ toasts }: { toasts: ToastItem[] }) {
               <p className="text-sm font-semibold text-[var(--gc-text)]">
                 {toast.title}
               </p>
+
               <p className="mt-1 text-sm leading-6 text-[var(--gc-soft)]">
                 {toast.description}
               </p>
@@ -730,7 +743,7 @@ function LandingToastStack({ toasts }: { toasts: ToastItem[] }) {
 }
 
 export default function LandingPage() {
-    const {
+  const {
     selectedDevice,
     devices,
     settings,
@@ -738,19 +751,11 @@ export default function LandingPage() {
     session,
     unreadNotifications,
     selectDevice,
-    startIrrigation,
     simulateThresholdEvent,
     refreshTelemetry,
     openNotifications,
     openQuickPanel,
   } = useAppState();
-
-    const accountLabel =
-    session.signedIn && session.userName
-      ? session.userName
-      : session.signedIn && session.email
-        ? session.email
-        : "Login";
 
   const selectedExtra = selectedDevice as typeof selectedDevice &
     LandingDeviceExtra;
@@ -761,46 +766,27 @@ export default function LandingPage() {
   const pumpEnabled = selectedExtra.pumpEnabled ?? false;
   const physicalPumpLocked = safeModeActive || !pumpEnabled;
 
-  const rawSoil = telemetryReady ? rawLabel(selectedExtra.rawSoil) : "—";
-  const soilVoltage = telemetryReady
-    ? voltageLabel(selectedExtra.soilVoltage)
-    : "—";
-
-  const relayState =
-    selectedExtra.relayState ??
-    (physicalPumpLocked ? "Protected" : "Enabled");
-
   const pumpState =
     selectedExtra.pumpState ?? (physicalPumpLocked ? "Protected" : "Ready");
 
-  const rainStatus = selectedExtra.rainStatus ?? "Pending";
-  const waterLevelStatus = selectedExtra.waterLevelStatus ?? "Pending";
-  const buttonStatus = selectedExtra.buttonStatus ?? "Pending";
-  const oledStatus = selectedExtra.oledStatus ?? "Pending";
-  const lastCommandStatus = selectedExtra.lastCommandStatus ?? "None";
+  const lastCommandStatus = selectedExtra.lastCommandStatus ?? "Ready";
+  const moistureLabel = telemetryReady ? `${selectedDevice.moisture}%` : "—";
+  const signalLabel = telemetryReady ? `${selectedDevice.signal}%` : "—";
 
-  const moistureLabel = telemetryReady
-    ? `${selectedDevice.moisture}%`
-    : "Waiting";
+  const accountLabel =
+    session.signedIn && session.userName
+      ? session.userName
+      : session.signedIn && session.email
+        ? session.email
+        : "Login";
 
-  const signalLabel = telemetryReady
-    ? `${selectedDevice.signal}%`
-    : "Waiting";
-
-  const [selectedCapabilityId, setSelectedCapabilityId] = useState("esp32");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   const toastCounterRef = useRef(0);
 
-  const selectedCapability =
-    capabilities.find((item) => item.id === selectedCapabilityId) ??
-    capabilities[0];
-
-  const SelectedCapabilityIcon = selectedCapability.icon;
-
   const chartBars = useMemo(() => {
     if (!telemetryReady) {
-      return Array.from({ length: chartPattern.length }, () => 0);
+      return Array.from({ length: chartPattern.length }, () => 12);
     }
 
     return chartPattern.map((value, index) =>
@@ -813,47 +799,35 @@ export default function LandingPage() {
   const activeBarValue =
     activeBarIndex === null ? null : chartBars[activeBarIndex] ?? null;
 
-  const deviceStatCards: Array<{
-    label: string;
-    value: string;
-    description: string;
-    icon: LucideIcon;
-    tone: Tone;
-  }> = [
+  const heroMetrics = [
     {
-      label: "Moisture",
-      value: moistureLabel,
-      description: telemetryReady ? "Mapped soil value." : "Waiting for device.",
-      icon: Droplets,
-      tone: telemetryReady ? statusTone(sensorStatus) : "pending",
-    },
-    {
-      label: "RAW",
-      value: rawSoil,
-      description: `D32 ADC · ${soilVoltage}`,
-      icon: Gauge,
-      tone:
-        !telemetryReady
-          ? "pending"
-          : statusTone(sensorStatus) === "warning"
-            ? "warning"
-            : "safe",
-    },
-    {
-      label: "Signal",
-      value: signalLabel,
-      description: "ESP32 Wi-Fi telemetry.",
-      icon: Wifi,
-      tone: telemetryReady ? "live" : "pending",
-    },
-    {
-      label: "Safety",
-      value: physicalPumpLocked ? "Protected" : "Live",
-      description: physicalPumpLocked ? "Relay guarded." : "Output enabled.",
+      label: "Workspace",
+      value: session.signedIn ? "Private" : "Ready",
+      detail: "Data stays under your account.",
       icon: ShieldCheck,
-      tone: physicalPumpLocked ? "safe" : "warning",
+      tone: "safe" as Tone,
+    },
+    {
+      label: "Telemetry",
+      value: telemetryReady ? "Live" : "Ready",
+      detail: telemetryReady
+        ? getLastSeenLabel(selectedExtra)
+        : "Ready for monitoring.",
+      icon: Wifi,
+      tone: telemetryReady ? ("live" as Tone) : ("pending" as Tone),
+    },
+    {
+      label: "Irrigation",
+      value: physicalPumpLocked ? "Protected" : "Live",
+      detail: physicalPumpLocked
+        ? "Pump output stays guarded."
+        : "Pump output is enabled.",
+      icon: Droplets,
+      tone: physicalPumpLocked ? ("safe" as Tone) : ("warning" as Tone),
     },
   ];
+
+  const activeDeviceName = selectedDevice.name || "GreenCloud Device";
 
   useEffect(() => {
     if (toasts.length === 0) return;
@@ -883,24 +857,12 @@ export default function LandingPage() {
     ]);
   }
 
-  function handleStartIrrigation() {
-    startIrrigation(selectedDevice.id);
-
-    showToast(
-      physicalPumpLocked ? "Protected command sent" : "Pump command sent",
-      physicalPumpLocked
-        ? `${selectedDevice.name} received an irrigation command. Relay remains protected by firmware.`
-        : `${selectedDevice.name} received a live pump command.`,
-      physicalPumpLocked ? "success" : "warning",
-    );
-  }
-
   function handleRuleCheck() {
     simulateThresholdEvent(selectedDevice.id);
 
     showToast(
-      "Rule-check event created",
-      `${selectedDevice.name} was checked against the configured threshold.`,
+      "Automation check created",
+      `${activeDeviceName} was checked against the configured moisture threshold.`,
       "warning",
     );
   }
@@ -910,14 +872,14 @@ export default function LandingPage() {
 
     showToast(
       "Telemetry refreshed",
-      "Landing page now reflects the latest shared workspace state.",
+      "GreenCloud is now showing the latest workspace state.",
       "info",
     );
   }
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[var(--gc-bg)] text-[var(--gc-text)]">
-      <div className="fixed inset-0 -z-40 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--gc-accent)_16%,transparent),transparent_30%),linear-gradient(180deg,var(--gc-bg-2),var(--gc-bg))]" />
+      <div className="fixed inset-0 -z-40 bg-[radial-gradient(circle_at_8%_0%,color-mix(in_srgb,var(--gc-accent)_13%,transparent),transparent_30%),radial-gradient(circle_at_88%_8%,color-mix(in_srgb,var(--gc-accent-2)_9%,transparent),transparent_28%),linear-gradient(180deg,var(--gc-bg-2),var(--gc-bg))]" />
 
       <AmbientOrbs themePreset={settings.themePreset} />
 
@@ -925,67 +887,69 @@ export default function LandingPage() {
         <LeafFallOverlay mode={settings.ambienceMode} />
       ) : null}
 
-      <div className="relative z-10 mx-auto w-full max-w-[1380px] px-4 py-5 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto w-full max-w-[1440px] px-4 py-4 sm:px-6 lg:px-8">
         <header className="sticky top-4 z-40">
-          <GlassCard className="px-4 py-3">
+          <GlassCard className="px-4 py-3 shadow-[0_18px_70px_rgba(0,0,0,0.3),0_0_30px_color-mix(in_srgb,var(--gc-glow)_72%,transparent)]">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <Link href="/" className="min-w-0">
+              <Link href="/" className="min-w-0 shrink-0">
                 <BrandMark
-                  title={settings.projectName || "GreenCloud"}
-                  subtitle="Smart irrigation workspace"
+                  title="GreenCloud"
+                  subtitle="SMART IRRIGATION WORKSPACE"
                   compact
+                  card
+                  className="max-w-full"
                 />
               </Link>
 
               <div className="flex flex-wrap items-center gap-2">
                 <a
                   href="#overview"
-                  className="premium-tab premium-tab-active rounded-full px-5 py-2 text-sm font-semibold"
+                  className="premium-tab premium-tab-active rounded-full px-4 py-2 text-sm font-semibold"
                 >
                   Overview
                 </a>
 
                 <a
-                  href="#hardware"
-                  className="premium-tab rounded-full px-5 py-2 text-sm font-semibold"
+                  href="#benefits"
+                  className="premium-tab rounded-full px-4 py-2 text-sm font-semibold"
                 >
-                  Hardware
+                  Benefits
                 </a>
 
                 <a
-                  href="#capabilities"
-                  className="premium-tab rounded-full px-5 py-2 text-sm font-semibold"
+                  href="#system"
+                  className="premium-tab rounded-full px-4 py-2 text-sm font-semibold"
                 >
                   System
                 </a>
 
                 <a
                   href="#control"
-                  className="premium-tab rounded-full px-5 py-2 text-sm font-semibold"
+                  className="premium-tab rounded-full px-4 py-2 text-sm font-semibold"
                 >
                   Control
                 </a>
 
-                                <Link
+                <Link
                   href={session.signedIn ? "/profile" : "/auth"}
                   className={cn(
-                    "premium-btn-secondary inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold",
+                    "premium-btn-secondary inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold",
                     session.signedIn
-                      ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_22px_var(--gc-glow)]"
+                      ? "border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] text-[var(--gc-text)]"
                       : "",
                   )}
                 >
-                  {session.signedIn ? <UserRound className="h-4 w-4" /> : null}
-                  <span className="max-w-[120px] truncate">
-                    {session.signedIn ? accountLabel : "Login"}
+                  <UserRound className="h-4 w-4" />
+                  <span className="max-w-[126px] truncate">
+                    {accountLabel}
                   </span>
                 </Link>
 
                 <button
                   type="button"
                   onClick={openQuickPanel}
-                  className="premium-btn-secondary flex h-11 w-11 items-center justify-center rounded-2xl"
-                  aria-label="Open landing settings"
+                  className="premium-btn-secondary flex h-10 w-10 items-center justify-center rounded-full"
+                  aria-label="Open interface settings"
                 >
                   <SlidersHorizontal className="h-5 w-5" />
                 </button>
@@ -993,13 +957,13 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={openNotifications}
-                  className="premium-btn-secondary relative flex h-11 w-11 items-center justify-center rounded-2xl"
+                  className="premium-btn-secondary relative flex h-10 w-10 items-center justify-center rounded-full"
                   aria-label="Open notifications"
                 >
                   <Bell className="h-5 w-5" />
 
                   {unreadNotifications > 0 ? (
-                    <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--gc-accent)] px-1 text-[11px] font-bold text-[#111708] shadow-[0_0_20px_var(--gc-glow)]">
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--gc-accent)] px-1 text-[10px] font-bold text-[#111708] shadow-[0_0_20px_var(--gc-glow)]">
                       {unreadNotifications}
                     </span>
                   ) : null}
@@ -1011,58 +975,50 @@ export default function LandingPage() {
 
         <section
           id="overview"
-          className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.98fr)_minmax(390px,500px)] lg:items-stretch"
+          className="grid gap-5 py-5 xl:grid-cols-[minmax(0,1.07fr)_minmax(380px,0.93fr)] xl:items-stretch"
         >
-          <GlassCard className="flex min-h-[620px] flex-col justify-between p-6 sm:p-8">
-            <div>
-              <SectionBadge>
-                ESP32 · Firebase · soil telemetry · protected irrigation
-              </SectionBadge>
+          <GlassCard className="relative flex min-h-[590px] flex-col justify-between overflow-hidden p-6 sm:p-8 2xl:p-9">
+            <div className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-24 left-14 h-64 w-64 rounded-full bg-[color-mix(in_srgb,var(--gc-accent-2)_12%,transparent)] blur-3xl" />
 
-              <h2 className="gc-hero-heading mt-7 max-w-5xl font-semibold text-[var(--gc-text)]">
-                GreenCloud turns a plant into a{" "}
-                <span className="bg-gradient-to-r from-[var(--gc-accent)] to-[var(--gc-accent-2)] bg-clip-text text-transparent">
-                  connected irrigation system.
+            <div className="relative z-10">
+              <SectionBadge>ESP32 · Firebase · Protected irrigation</SectionBadge>
+
+              <h1 className="mt-7 max-w-5xl text-[clamp(3.8rem,7.4vw,7.45rem)] font-semibold leading-[0.86] tracking-[-0.088em] text-[var(--gc-text)]">
+                Premium control for{" "}
+                <span className="bg-gradient-to-r from-[var(--gc-accent)] via-[var(--gc-accent-2)] to-[var(--gc-text)] bg-clip-text text-transparent">
+                  connected plant irrigation.
                 </span>
-              </h2>
+              </h1>
 
-              <p className="mt-7 max-w-3xl text-lg leading-8 text-[var(--gc-soft)] sm:text-xl">
-                GreenCloud connects ESP32 plant devices to a private Firebase
-                workspace, streams live soil telemetry, separates every account
-                by UID, and keeps irrigation commands protected by firmware
-                safety controls.
+              <p className="mt-7 max-w-3xl text-base leading-7 text-[var(--gc-soft)] sm:text-lg sm:leading-8">
+                Connect your ESP32-powered plant system, monitor soil conditions
+                in real time, and manage irrigation safely from one private
+                GreenCloud workspace.
               </p>
 
               <div className="mt-7 flex flex-wrap gap-3">
-                <StatusPill label="Firebase Auth workspace" tone="live" />
-
+                <StatusPill label="Private workspace" tone="safe" icon={Lock} />
                 <StatusPill
-                  label={
-                    telemetryReady ? "Device telemetry seen" : "Waiting telemetry"
-                  }
+                  label={telemetryReady ? "Telemetry live" : "Ready to pair"}
                   tone={telemetryReady ? "live" : "pending"}
+                  icon={Wifi}
                 />
-
                 <StatusPill
-                  label={physicalPumpLocked ? "Pump protected" : "Pump output live"}
+                  label={physicalPumpLocked ? "Pump protected" : "Pump live"}
                   tone={physicalPumpLocked ? "safe" : "warning"}
-                />
-
-                <StatusPill
-                  label={displayStatus(lastCommandStatus)}
-                  tone={statusTone(displayStatus(lastCommandStatus))}
+                  icon={Droplets}
                 />
               </div>
 
-              <div className="mt-9 flex flex-wrap gap-4">
-                <button
-                  type="button"
-                  onClick={handleStartIrrigation}
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  href="/devices"
                   className="premium-btn inline-flex items-center gap-2 rounded-[22px] px-7 py-4 text-base font-semibold"
                 >
-                  Send protected command
-                  <Droplets className="h-4 w-4" />
-                </button>
+                  Pair a device
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
 
                 <Link
                   href="/dashboard"
@@ -1074,13 +1030,13 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="mt-9 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {deviceStatCards.map((item) => (
-                <MiniStatCard
+            <div className="relative z-10 mt-9 grid gap-3 sm:grid-cols-3">
+              {heroMetrics.map((item) => (
+                <ProductMetric
                   key={item.label}
                   label={item.label}
                   value={item.value}
-                  description={item.description}
+                  detail={item.detail}
                   icon={item.icon}
                   tone={item.tone}
                 />
@@ -1088,56 +1044,67 @@ export default function LandingPage() {
             </div>
           </GlassCard>
 
-          <GlassCard className="h-full overflow-hidden p-0">
-            <div className="relative h-[280px] overflow-hidden rounded-t-[inherit] sm:h-[340px]">
+          <GlassCard className="relative min-h-[590px] overflow-hidden p-0">
+            <div className="relative h-[260px] overflow-hidden rounded-t-[inherit]">
               <Image
                 src="/hero-bg.jpg"
                 alt="GreenCloud irrigation control surface"
                 fill
                 priority
-                sizes="(max-width: 1024px) 100vw, 500px"
+                sizes="(max-width: 920px) 100vw, 520px"
                 className="object-cover"
               />
 
-              <div className="absolute inset-0 bg-gradient-to-t from-[var(--gc-bg)] via-[rgba(0,0,0,0.22)] to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--gc-bg)] via-[rgba(0,0,0,0.24)] to-transparent" />
 
-              <div className="absolute left-5 top-5 rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-black/38 px-4 py-2 text-sm font-semibold text-[var(--gc-text)] backdrop-blur-xl">
-                <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[var(--gc-accent)] shadow-[0_0_16px_var(--gc-glow)]" />
-                {selectedDevice.status}
+              <div className="absolute left-5 top-5">
+                <StatusPill
+                  label={selectedDevice.status}
+                  tone={statusTone(selectedDevice.status)}
+                  icon={Wifi}
+                />
               </div>
 
               <button
                 type="button"
                 onClick={openNotifications}
-                className="premium-btn-secondary absolute right-5 top-5 flex h-12 w-12 items-center justify-center rounded-2xl"
+                className="premium-btn-secondary absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-2xl"
                 aria-label="Open notifications"
               >
                 <Bell className="h-5 w-5" />
               </button>
 
-              <div className="absolute bottom-7 left-7 right-7">
-                <SectionBadge>Selected device</SectionBadge>
-                <h3 className="mt-4 break-words text-5xl font-semibold tracking-[-0.07em] text-[var(--gc-text)]">
-                  {selectedDevice.name}
-                </h3>
+              <div className="absolute bottom-6 left-6 right-6">
+                <SectionBadge>Device workspace</SectionBadge>
+
+                <h2 className="mt-4 break-words text-[clamp(2.35rem,4vw,4.1rem)] font-semibold leading-[0.9] tracking-[-0.07em] text-[var(--gc-text)]">
+                  {activeDeviceName}
+                </h2>
+
                 <p className="mt-2 break-words text-base text-[var(--gc-soft)]">
                   {selectedDevice.place}
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-4 border-t border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] p-5 sm:grid-cols-[0.9fr_1.1fr]">
-              <div className="rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--gc-muted)]">
-                  Current moisture
-                </p>
+            <div className="grid gap-4 p-5">
+              <SoftPanel>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--gc-muted)]">
+                      Moisture
+                    </p>
 
-                <p className="mt-5 text-6xl font-semibold tracking-[-0.07em] text-[var(--gc-text)]">
-                  {telemetryReady ? selectedDevice.moisture : "—"}
-                  <span className="text-2xl text-[var(--gc-accent-2)]">
-                    {telemetryReady ? "%" : ""}
-                  </span>
-                </p>
+                    <p className="mt-4 text-6xl font-semibold tracking-[-0.07em] text-[var(--gc-text)]">
+                      {moistureLabel}
+                    </p>
+                  </div>
+
+                  <StatusPill
+                    label={telemetryReady ? sensorStatus : "Ready"}
+                    tone={telemetryReady ? statusTone(sensorStatus) : "pending"}
+                  />
+                </div>
 
                 <div className="mt-5 h-3 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--gc-border)_50%,transparent)]">
                   <div
@@ -1148,86 +1115,72 @@ export default function LandingPage() {
                   />
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <span className="rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] px-4 py-2 text-sm text-[var(--gc-soft)]">
-                    RAW {rawSoil}
-                  </span>
+                <p className="mt-4 text-sm leading-6 text-[var(--gc-soft)]">
+                  {telemetryReady
+                    ? `Last report: ${getLastSeenLabel(selectedExtra)}.`
+                    : "Pair your ESP32 to unlock live plant telemetry."}
+                </p>
+              </SoftPanel>
 
-                  <span className="text-sm text-[var(--gc-muted)]">
-                    {getLastSeenLabel(selectedExtra)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
+              <SoftPanel>
                 <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+                  <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--gc-muted)]">
-                      Protected automation
+                      Automation
                     </p>
 
-                    <p className="mt-5 break-words text-4xl font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
+                    <p className="mt-4 break-words text-4xl font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
                       {automation.mode}
-                    </p>
-
-                    <p className="mt-4 text-base leading-7 text-[var(--gc-soft)]">
-                      Threshold {automation.moistureThreshold}% · Pump{" "}
-                      {automation.pumpDurationSeconds}s · protection{" "}
-                      {safeModeActive ? "on" : "off"}
                     </p>
                   </div>
 
                   <StatusPill
-                    label={physicalPumpLocked ? "Protected" : "Pump live"}
+                    label={physicalPumpLocked ? "Protected" : "Live output"}
                     tone={physicalPumpLocked ? "safe" : "warning"}
                   />
                 </div>
 
-                <div className="mt-5 grid grid-cols-3 gap-3">
+                <div className="mt-5 grid grid-cols-2 gap-3">
                   {[
+                    ["Threshold", `${automation.moistureThreshold}%`],
+                    ["Command", `${automation.pumpDurationSeconds}s`],
                     ["Signal", signalLabel],
-                    ["Voltage", soilVoltage],
-                    ["Relay", relayState],
+                    ["State", displayStatus(pumpState)],
                   ].map(([label, value]) => (
                     <div
                       key={label}
-                      className="rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-black/18 p-4"
+                      className="rounded-[20px] border border-[color-mix(in_srgb,var(--gc-border)_62%,transparent)] bg-black/18 p-4"
                     >
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gc-muted)]">
                         {label}
                       </p>
+
                       <p className="mt-3 truncate text-2xl font-semibold tracking-[-0.05em] text-[var(--gc-text)]">
-                        {displayStatus(value)}
+                        {value}
                       </p>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
+              </SoftPanel>
 
-            <div className="px-5 pb-5">
-              <div className="relative rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
+              <SoftPanel>
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--gc-muted)]">
-                    Moisture pattern
+                    Moisture trend
                   </p>
 
-                  <span className="rounded-full border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] px-4 py-2 text-xs text-[var(--gc-soft)]">
-                    {telemetryReady ? "Live trend" : "Waiting data"}
+                  <span className="rounded-full border border-[color-mix(in_srgb,var(--gc-border)_72%,transparent)] bg-white/[0.035] px-4 py-2 text-xs text-[var(--gc-soft)]">
+                    {telemetryReady ? "Live pattern" : "Preview mode"}
                   </span>
                 </div>
 
-                <div className="relative mt-8 h-40">
+                <div className="relative mt-8 h-32">
                   <div
-                    className="absolute left-0 right-0 z-10 border-t border-dashed border-[color-mix(in_srgb,var(--gc-warn)_70%,transparent)]"
+                    className="absolute left-0 right-0 z-10 border-t border-dashed border-[color-mix(in_srgb,var(--gc-warn)_60%,transparent)]"
                     style={{
                       bottom: `${automation.moistureThreshold}%`,
                     }}
-                  >
-                    <span className="absolute -top-4 left-4 rounded-full border border-[color-mix(in_srgb,var(--gc-warn)_35%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_82%,black)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--gc-warn)]">
-                      Threshold {automation.moistureThreshold}%
-                    </span>
-                  </div>
+                  />
 
                   {activeBarIndex !== null && activeBarValue !== null ? (
                     <div
@@ -1241,10 +1194,11 @@ export default function LandingPage() {
                       <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--gc-muted)]">
                         Sample {activeBarIndex + 1}
                       </p>
+
                       <p className="mt-1 font-semibold text-[var(--gc-text)]">
                         {telemetryReady
                           ? `${activeBarValue}% moisture`
-                          : "Waiting"}
+                          : "Preview"}
                       </p>
                     </div>
                   ) : null}
@@ -1260,7 +1214,7 @@ export default function LandingPage() {
                         onBlur={() => setActiveBarIndex(null)}
                         className="flex h-full flex-1 items-end rounded-t-2xl outline-none"
                         aria-label={`Moisture sample ${index + 1}: ${
-                          telemetryReady ? `${bar}%` : "waiting"
+                          telemetryReady ? `${bar}%` : "preview"
                         }`}
                       >
                         <span
@@ -1268,227 +1222,98 @@ export default function LandingPage() {
                             "block w-full rounded-t-2xl transition",
                             telemetryReady
                               ? "bg-gradient-to-t from-[var(--gc-accent)] to-[var(--gc-accent-2)] shadow-[0_0_22px_var(--gc-glow)] hover:brightness-125"
-                              : "bg-white/[0.06]",
+                              : "bg-white/[0.08]",
                           )}
                           style={{
-                            height: `${
-                              telemetryReady ? Math.max(18, bar) : 8
-                            }%`,
+                            height: `${Math.max(12, bar)}%`,
                           }}
                         />
                       </button>
                     ))}
                   </div>
                 </div>
-              </div>
+              </SoftPanel>
             </div>
           </GlassCard>
         </section>
 
-        <section id="hardware" className="py-6">
-          <GlassCard className="p-6 sm:p-7">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <section id="benefits" className="py-4">
+          <GlassCard className="p-6 sm:p-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <SectionBadge>Hardware stack</SectionBadge>
-                <h2 className="mt-5 max-w-3xl text-5xl font-semibold leading-[0.95] tracking-[-0.07em] text-[var(--gc-text)] sm:text-6xl">
-                  Built around connected irrigation hardware.
+                <SectionBadge>Product benefits</SectionBadge>
+
+                <h2 className="mt-5 max-w-4xl text-[clamp(2.8rem,5vw,5.8rem)] font-semibold leading-[0.94] tracking-[-0.075em] text-[var(--gc-text)]">
+                  A complete workspace for connected irrigation.
                 </h2>
               </div>
 
               <Link
                 href="/devices"
-                className="premium-btn-secondary inline-flex items-center justify-center rounded-[20px] px-5 py-3 text-sm font-semibold"
+                className="premium-btn-secondary inline-flex items-center justify-center gap-2 rounded-[20px] px-5 py-3 text-sm font-semibold"
               >
                 View devices
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
-            <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <HardwareCard
-                title="ESP32 DevKit V1"
-                value={selectedDevice.status}
-                description="Main controller for sensors and Firebase sync."
-                icon={Cpu}
-                tone={
-                  selectedDevice.status === "Online"
-                    ? "live"
-                    : selectedDevice.status === "Offline"
-                      ? "offline"
-                      : "pending"
-                }
-              />
-
-              <HardwareCard
-                title="Soil moisture"
-                value={sensorStatus}
-                description="Capacitive sensor AO is connected to D32."
-                icon={Leaf}
-                tone={statusTone(sensorStatus)}
-              />
-
-              <HardwareCard
-                title="OLED display"
-                value={oledStatus}
-                description="Shows local device status when reported."
-                icon={Monitor}
-                tone={statusTone(oledStatus)}
-              />
-
-              <HardwareCard
-                title="Relay module"
-                value={relayState}
-                description="Pump output is firmware-protected."
-                icon={Lock}
-                tone={statusTone(relayState)}
-              />
-
-              <HardwareCard
-                title="DC pump"
-                value={pumpState}
-                description="Physical pumping stays protected by firmware controls."
-                icon={Power}
-                tone={statusTone(pumpState)}
-              />
-
-              <HardwareCard
-                title="Float sensor"
-                value={waterLevelStatus}
-                description="Tank protection field is ready."
-                icon={Waves}
-                tone={statusTone(waterLevelStatus)}
-              />
-
-              <HardwareCard
-                title="Rain sensor"
-                value={rainStatus}
-                description="Rain lockout field is ready."
-                icon={Umbrella}
-                tone={statusTone(rainStatus)}
-              />
-
-              <HardwareCard
-                title="Local button"
-                value={buttonStatus}
-                description="KY-004 manual trigger field is ready."
-                icon={ToggleLeft}
-                tone={statusTone(buttonStatus)}
-              />
+            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {productPillars.map((pillar) => (
+                <ProductPillarCard key={pillar.title} {...pillar} />
+              ))}
             </div>
           </GlassCard>
         </section>
 
-        <section
-          id="capabilities"
-          className="grid gap-6 py-6 lg:grid-cols-[0.9fr_1.1fr]"
-        >
-          <GlassCard className="p-6 sm:p-7">
-            <SectionBadge>System layers</SectionBadge>
+        <section id="system" className="py-4">
+          <GlassCard className="p-6 sm:p-8">
+            <div className="grid gap-8 lg:grid-cols-[0.74fr_1.26fr] lg:items-start">
+              <div>
+                <SectionBadge>System flow</SectionBadge>
 
-            <h2 className="mt-6 max-w-xl text-5xl font-semibold leading-[0.95] tracking-[-0.07em] text-[var(--gc-text)] sm:text-6xl">
-              One system, five clear layers.
-            </h2>
+                <h2 className="mt-5 max-w-xl text-[clamp(2.7rem,4.8vw,5.4rem)] font-semibold leading-[0.94] tracking-[-0.075em] text-[var(--gc-text)]">
+                  From plant data to protected irrigation.
+                </h2>
 
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--gc-soft)]">
-              This section explains the complete chain from device telemetry to
-              secure command handling.
-            </p>
+                <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--gc-soft)] sm:text-lg">
+                  GreenCloud connects ESP32 telemetry, Firebase storage,
+                  automation rules and protected pump commands in one clean
+                  workflow.
+                </p>
 
-            <div className="mt-7 space-y-3">
-              {capabilities.map((item) => {
-                const Icon = item.icon;
-                const active = selectedCapabilityId === item.id;
-
-                return (
+                <div className="mt-7 flex flex-wrap gap-3">
                   <button
                     type="button"
-                    key={item.id}
-                    onClick={() => setSelectedCapabilityId(item.id)}
-                    className={cn(
-                      "w-full rounded-[24px] border p-5 text-left transition",
-                      active
-                        ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_14%,transparent)] shadow-[0_0_36px_var(--gc-glow)]"
-                        : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.03] hover:bg-white/[0.055]",
-                    )}
+                    onClick={handleRuleCheck}
+                    className="premium-btn inline-flex items-center gap-2 rounded-[22px] px-6 py-3 text-sm font-semibold"
                   >
-                    <div className="flex items-start gap-4">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-black/18 text-[var(--gc-accent-2)]">
-                        <Icon className="h-5 w-5" />
-                      </span>
-
-                      <span>
-                        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--gc-muted)]">
-                          {item.kicker}
-                        </span>
-                        <span className="mt-3 block text-2xl font-semibold tracking-[-0.05em] text-[var(--gc-text)]">
-                          {item.title}
-                        </span>
-                        <span className="mt-3 line-clamp-2 block text-base leading-7 text-[var(--gc-soft)]">
-                          {item.description}
-                        </span>
-                      </span>
-                    </div>
+                    Create rule check
+                    <Sparkles className="h-4 w-4" />
                   </button>
-                );
-              })}
-            </div>
-          </GlassCard>
 
-          <GlassCard className="p-6 sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <SectionBadge>Selected layer</SectionBadge>
-              <SelectedCapabilityIcon className="h-6 w-6 text-[var(--gc-accent-2)]" />
-            </div>
-
-            <h3 className="mt-8 max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.07em] text-[var(--gc-text)] sm:text-6xl">
-              {selectedCapability.title}
-            </h3>
-
-            <p className="mt-5 max-w-3xl text-lg leading-8 text-[var(--gc-soft)]">
-              {selectedCapability.description}
-            </p>
-
-            <div className="mt-8 space-y-3">
-              {selectedCapability.points.map((point) => (
-                <div
-                  key={point}
-                  className="rounded-[20px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] px-5 py-4 text-base font-semibold text-[var(--gc-text)]"
-                >
-                  {point}
+                  <button
+                    type="button"
+                    onClick={handleRefreshTelemetry}
+                    className="premium-btn-secondary inline-flex items-center gap-2 rounded-[22px] px-6 py-3 text-sm font-semibold"
+                  >
+                    Refresh telemetry
+                    <RefreshCw className="h-4 w-4" />
+                  </button>
                 </div>
-              ))}
-            </div>
+              </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <button
-                type="button"
-                onClick={handleStartIrrigation}
-                className="premium-btn rounded-[20px] px-5 py-4 text-sm font-semibold"
-              >
-                Send command
-              </button>
-
-              <button
-                type="button"
-                onClick={handleRuleCheck}
-                className="premium-btn-secondary rounded-[20px] px-5 py-4 text-sm font-semibold"
-              >
-                Create rule-check
-              </button>
-
-              <button
-                type="button"
-                onClick={handleRefreshTelemetry}
-                className="premium-btn-secondary rounded-[20px] px-5 py-4 text-sm font-semibold"
-              >
-                Refresh telemetry
-              </button>
+              <div className="grid gap-4 md:grid-cols-2">
+                {systemSteps.map((step) => (
+                  <SystemStepCard key={step.label} step={step} />
+                ))}
+              </div>
             </div>
           </GlassCard>
         </section>
 
         <section
           id="control"
-          className="grid gap-6 py-6 lg:grid-cols-[0.9fr_1.1fr]"
+          className="grid gap-5 py-4 lg:grid-cols-[0.92fr_1.08fr]"
         >
           <GlassCard className="overflow-hidden p-0">
             <div className="relative h-64 overflow-hidden rounded-t-[inherit]">
@@ -1499,124 +1324,167 @@ export default function LandingPage() {
                 sizes="(max-width: 1024px) 100vw, 720px"
                 className="object-cover"
               />
+
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--gc-bg)] via-transparent to-transparent" />
+
               <div className="absolute bottom-5 left-5">
-                <SectionBadge>Control surface</SectionBadge>
+                <SectionBadge>Control showcase</SectionBadge>
               </div>
             </div>
 
-            <div className="p-6">
-              <h2 className="text-5xl font-semibold leading-[0.95] tracking-[-0.07em] text-[var(--gc-text)] sm:text-6xl">
-                Live site,
+            <div className="p-6 sm:p-7">
+              <h2 className="text-[clamp(2.8rem,5vw,5.2rem)] font-semibold leading-[0.95] tracking-[-0.075em] text-[var(--gc-text)]">
+                Live dashboard.
                 <br />
-                protected pump.
+                Protected pump.
               </h2>
 
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--gc-soft)]">
-                The software chain is active now. Physical pump actuation stays
-                protected until relay and pump wiring are secured.
+              <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--gc-soft)] sm:text-lg">
+                Monitor the workspace while GreenCloud keeps irrigation commands
+                protected by default.
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                {devices.map((device) => (
-                  <button
-                    type="button"
-                    key={device.id}
-                    onClick={() => selectDevice(device.id)}
-                    className={cn(
-                      "rounded-full border px-4 py-2 text-sm font-semibold transition",
-                      device.id === selectedDevice.id
-                        ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_22px_var(--gc-glow)]"
-                        : "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
-                    )}
+              <div className="mt-7 flex flex-wrap gap-3">
+                {devices.length > 0 ? (
+                  devices.map((device) => (
+                    <button
+                      type="button"
+                      key={device.id}
+                      onClick={() => selectDevice(device.id)}
+                      className={cn(
+                        "rounded-full border px-4 py-2 text-sm font-semibold transition",
+                        device.id === selectedDevice.id
+                          ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_22px_var(--gc-glow)]"
+                          : "border-[color-mix(in_srgb,var(--gc-border)_76%,transparent)] bg-white/[0.035] text-[var(--gc-soft)] hover:bg-white/[0.06] hover:text-[var(--gc-text)]",
+                      )}
+                    >
+                      {device.name}
+                    </button>
+                  ))
+                ) : (
+                  <Link
+                    href="/devices"
+                    className="premium-btn-secondary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
                   >
-                    {device.name}
-                  </button>
-                ))}
+                    Pair your first device
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
               </div>
             </div>
           </GlassCard>
 
-          <div className="grid gap-6">
-            <GlassCard className="p-6">
-              <SectionBadge>Rule snapshot</SectionBadge>
+          <GlassCard className="p-6 sm:p-7">
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div>
+                <SectionBadge>Automation snapshot</SectionBadge>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <h2 className="mt-5 text-[clamp(2.4rem,4.4vw,4.4rem)] font-semibold leading-[0.95] tracking-[-0.07em] text-[var(--gc-text)]">
+                  Ready for protected watering.
+                </h2>
+
+                <p className="mt-5 text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
+                  Thresholds, cooldown and command duration stay readable before
+                  the pump is physically enabled.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
                 {[
-                  ["Mode", automation.mode],
-                  ["Threshold", `${automation.moistureThreshold}%`],
-                  ["Cooldown", `${automation.cooldownMinutes} min`],
-                  ["Pump command", `${automation.pumpDurationSeconds}s`],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="rounded-[20px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-4"
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[var(--gc-muted)]">
-                      {label}
-                    </p>
-                    <p className="mt-3 truncate text-2xl font-semibold tracking-[-0.05em] text-[var(--gc-text)]">
-                      {value}
-                    </p>
-                  </div>
-                ))}
+                  ["Mode", automation.mode, SlidersHorizontal],
+                  ["Threshold", `${automation.moistureThreshold}%`, Gauge],
+                  ["Cooldown", `${automation.cooldownMinutes} min`, RefreshCw],
+                  ["Command", `${automation.pumpDurationSeconds}s`, Zap],
+                ].map(([label, value, Icon]) => {
+                  const TileIcon = Icon as LucideIcon;
+
+                  return (
+                    <ProductMetric
+                      key={String(label)}
+                      label={String(label)}
+                      value={String(value)}
+                      detail="Workspace rule."
+                      icon={TileIcon}
+                      tone="pending"
+                    />
+                  );
+                })}
               </div>
-            </GlassCard>
+            </div>
 
-            <GlassCard className="p-6">
-              <SectionBadge>System readiness</SectionBadge>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <ProductMetric
+                label="Devices"
+                value={`${devices.length}`}
+                detail="Paired nodes."
+                icon={Sprout}
+                tone={devices.length > 0 ? "live" : "pending"}
+              />
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <MiniStatCard
-                  label="Devices"
-                  value={`${devices.length}`}
-                  description="Workspace nodes."
-                  icon={Sprout}
-                  tone="pending"
-                />
+              <ProductMetric
+                label="Alerts"
+                value={`${unreadNotifications}`}
+                detail="Important updates."
+                icon={Bell}
+                tone={unreadNotifications > 0 ? "warning" : "live"}
+              />
 
-                <MiniStatCard
-                  label="Alerts"
-                  value={`${unreadNotifications}`}
-                  description="Unread events."
-                  icon={Bell}
-                  tone={unreadNotifications > 0 ? "warning" : "live"}
-                />
+              <ProductMetric
+                label="Protection"
+                value={physicalPumpLocked ? "On" : "Live"}
+                detail="Pump guard."
+                icon={ShieldCheck}
+                tone={physicalPumpLocked ? "safe" : "warning"}
+              />
 
-                <MiniStatCard
-                  label="Power"
-                  value={selectedExtra.power ?? "USB / Adapter"}
-                  description="Device and pump power stay separated."
-                  icon={Power}
-                  tone="safe"
-                />
+              <ProductMetric
+                label="Command"
+                value={displayStatus(lastCommandStatus)}
+                detail="Latest state."
+                icon={CheckCircle2}
+                tone={statusTone(displayStatus(lastCommandStatus))}
+              />
+            </div>
+          </GlassCard>
+        </section>
 
-                <MiniStatCard
-                  label="Firebase"
-                  value="UID"
-                  description="Private user path."
-                  icon={ShieldCheck}
-                  tone="safe"
-                />
+        <section className="py-4 pb-8">
+          <GlassCard className="relative overflow-hidden p-6 sm:p-8">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_12%,color-mix(in_srgb,var(--gc-accent)_14%,transparent),transparent_35%)]" />
 
-                <MiniStatCard
-                  label="Firmware"
-                  value={selectedExtra.firmware ?? "GreenCloud"}
-                  description="Device firmware profile."
-                  icon={Radio}
-                  tone="safe"
-                />
+            <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <SectionBadge>Ready to connect</SectionBadge>
 
-                <MiniStatCard
-                  label="Last command"
-                  value={displayStatus(lastCommandStatus)}
-                  description="Device response state."
-                  icon={CheckCircle2}
-                  tone={statusTone(displayStatus(lastCommandStatus))}
-                />
+                <h2 className="mt-5 max-w-4xl text-[clamp(2.8rem,5.2vw,5.8rem)] font-semibold leading-[0.95] tracking-[-0.075em] text-[var(--gc-text)]">
+                  Connect your ESP32 and bring your plant zone online.
+                </h2>
+
+                <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--gc-soft)] sm:text-lg">
+                  Use the OLED pairing code to attach your device, then monitor
+                  telemetry and manage irrigation from one secure workspace.
+                </p>
               </div>
-            </GlassCard>
-          </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/devices"
+                  className="premium-btn inline-flex items-center gap-2 rounded-[22px] px-7 py-4 text-base font-semibold"
+                >
+                  Pair device
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <Link
+                  href="/dashboard"
+                  className="premium-btn-secondary inline-flex items-center gap-2 rounded-[22px] px-7 py-4 text-base font-semibold"
+                >
+                  Open dashboard
+                  <Zap className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          </GlassCard>
         </section>
       </div>
 

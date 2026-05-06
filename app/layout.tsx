@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#060806",
+  themeColor: "#050a0d",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -66,19 +66,19 @@ const themeInitScript = `
       "calm": true
     };
 
-    var theme = settings.themePreset || settings.theme || "botanical-dark";
+    var theme = settings.themePreset || settings.theme || "rain-glass";
     var compact = settings.compactMode ? "true" : "false";
     var motion = settings.animations === false ? "off" : "on";
     var ambience = settings.leafAmbience === false
       ? "calm"
-      : settings.ambienceMode || "leaves";
+      : settings.ambienceMode || "rain";
 
     if (!allowedThemes[theme]) {
-      theme = "botanical-dark";
+      theme = "rain-glass";
     }
 
     if (!allowedAmbiences[ambience]) {
-      ambience = "leaves";
+      ambience = "rain";
     }
 
     document.documentElement.dataset.theme = theme;
@@ -86,10 +86,10 @@ const themeInitScript = `
     document.documentElement.dataset.motion = motion;
     document.documentElement.dataset.ambience = ambience;
   } catch (error) {
-    document.documentElement.dataset.theme = "botanical-dark";
+    document.documentElement.dataset.theme = "rain-glass";
     document.documentElement.dataset.compact = "false";
     document.documentElement.dataset.motion = "on";
-    document.documentElement.dataset.ambience = "leaves";
+    document.documentElement.dataset.ambience = "rain";
   }
 })();
 `;
@@ -103,10 +103,10 @@ export default function RootLayout({
     <html
       lang="en"
       className={manrope.variable}
-      data-theme="botanical-dark"
+      data-theme="rain-glass"
       data-compact="false"
       data-motion="on"
-      data-ambience="leaves"
+      data-ambience="rain"
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >

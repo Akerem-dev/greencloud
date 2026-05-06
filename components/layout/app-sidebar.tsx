@@ -2,29 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   Activity,
   Bell,
-  CloudRain,
   Cpu,
   Droplets,
   Gauge,
   Home,
   LayoutDashboard,
-  Leaf,
   Lock,
-  Monitor,
-  Radio,
   Settings2,
   ShieldCheck,
   SlidersHorizontal,
   Sprout,
-  ToggleLeft,
-  Waves,
   Wifi,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
+
 import { useAppState } from "@/components/providers/app-state-provider";
 import BrandMark from "@/components/shared/brand-mark";
 import { cn } from "@/lib/utils";
@@ -35,36 +30,31 @@ type DeviceExtra = {
   sensorStatus?: string;
   safeMode?: boolean;
   pumpEnabled?: boolean;
-  relayState?: string;
   pumpState?: string;
-  waterLevelStatus?: string;
-  rainStatus?: string;
-  buttonStatus?: string;
-  oledStatus?: string;
-  firmware?: string;
   lastCommandStatus?: string;
   lastSeenMs?: number;
-  power?: string;
 };
 
 type Tone = "live" | "safe" | "pending" | "warning" | "offline";
 
-const mainNavigation = [
-  {
-    label: "Overview",
-    subtitle: "Product home",
-    href: "/",
-    icon: Home,
-  },
+type NavigationItem = {
+  label: string;
+  subtitle: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+const mainNavigation: NavigationItem[] = [
+  { label: "Overview", subtitle: "Product home", href: "/", icon: Home },
   {
     label: "Dashboard",
-    subtitle: "Live workspace",
+    subtitle: "Live telemetry",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
     label: "Devices",
-    subtitle: "Paired units",
+    subtitle: "Pairing and nodes",
     href: "/devices",
     icon: Cpu,
   },
@@ -82,7 +72,7 @@ const mainNavigation = [
   },
   {
     label: "Settings",
-    subtitle: "Workspace control",
+    subtitle: "Workspace setup",
     href: "/settings",
     icon: Settings2,
   },
@@ -97,24 +87,30 @@ function hasTelemetry(device: DeviceExtra & { status?: string; signal?: number }
   );
 }
 
-function getToneClass(tone: Tone) {
-  if (tone === "live") {
-    return "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_13%,transparent)] text-[var(--gc-text)]";
+function displayStatus(value: string) {
+  const lower = value.toLowerCase();
+
+  if (lower === "dry-run" || lower === "locked" || lower === "safe") {
+    return "Protected";
   }
 
-  if (tone === "safe") {
-    return "border-[color-mix(in_srgb,var(--gc-accent-2)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_12%,transparent)] text-[var(--gc-text)]";
+  if (lower === "none" || lower === "pending") {
+    return "Ready";
   }
 
-  if (tone === "warning") {
-    return "border-[color-mix(in_srgb,var(--gc-warn)_38%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_14%,transparent)] text-[var(--gc-text)]";
+  if (lower === "idle") {
+    return "Standby";
   }
 
-  if (tone === "offline") {
-    return "border-[color-mix(in_srgb,var(--gc-danger)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_12%,transparent)] text-[var(--gc-text)]";
+  if (lower === "sensor check") {
+    return "Calibrating";
   }
 
-  return "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-white/[0.035] text-[var(--gc-soft)]";
+  if (lower === "handled") {
+    return "Completed";
+  }
+
+  return value;
 }
 
 function statusTone(value: string): Tone {
@@ -128,7 +124,8 @@ function statusTone(value: string): Tone {
     lower.includes("clear") ||
     lower.includes("ok") ||
     lower.includes("handled") ||
-    lower.includes("seen")
+    lower.includes("seen") ||
+    lower.includes("completed")
   ) {
     return "live";
   }
@@ -153,79 +150,127 @@ function statusTone(value: string): Tone {
     lower.includes("empty") ||
     lower.includes("detected") ||
     lower.includes("sensor check") ||
-    lower.includes("blocked")
+    lower.includes("blocked") ||
+    lower.includes("calibrating")
   ) {
     return "warning";
-  }
-
-  if (
-    lower.includes("pending") ||
-    lower.includes("idle") ||
-    lower.includes("none") ||
-    lower.includes("syncing") ||
-    lower.includes("waiting")
-  ) {
-    return "pending";
   }
 
   return "pending";
 }
 
-function displayStatus(value: string) {
-  const lower = value.toLowerCase();
+function toneDotClass(tone: Tone) {
+  if (tone === "live") return "bg-[var(--gc-accent)]";
+  if (tone === "safe") {
+    return "bg-[color-mix(in_srgb,var(--gc-accent-2)_78%,white_22%)]";
+  }
+  if (tone === "warning") return "bg-[var(--gc-warn)]";
+  if (tone === "offline") return "bg-[var(--gc-danger)]";
+  return "bg-[var(--gc-muted)]";
+}
 
-  if (lower === "dry-run" || lower === "locked") return "Protected";
-  if (lower === "none") return "No command";
-  if (lower === "pending") return "Waiting";
+function tonePillClass(tone: Tone) {
+  if (tone === "live") {
+    return "border-[color-mix(in_srgb,var(--gc-accent)_26%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_9%,transparent)] text-[var(--gc-text)]";
+  }
 
-  return value;
+  if (tone === "safe") {
+    return "border-[color-mix(in_srgb,var(--gc-accent-2)_26%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent-2)_9%,transparent)] text-[var(--gc-text)]";
+  }
+
+  if (tone === "warning") {
+    return "border-[color-mix(in_srgb,var(--gc-warn)_26%,transparent)] bg-[color-mix(in_srgb,var(--gc-warn)_9%,transparent)] text-[var(--gc-text)]";
+  }
+
+  if (tone === "offline") {
+    return "border-[color-mix(in_srgb,var(--gc-danger)_24%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_9%,transparent)] text-[var(--gc-text)]";
+  }
+
+  return "border-[color-mix(in_srgb,var(--gc-border)_58%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_64%,transparent)] text-[var(--gc-soft)]";
+}
+
+function metricToneClass(tone: Tone) {
+  if (tone === "live") {
+    return "border-[color-mix(in_srgb,var(--gc-accent)_20%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-accent)_7%,transparent),rgba(255,255,255,0.014))]";
+  }
+
+  if (tone === "safe") {
+    return "border-[color-mix(in_srgb,var(--gc-accent-2)_22%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-accent-2)_8%,transparent),rgba(255,255,255,0.014))]";
+  }
+
+  if (tone === "warning") {
+    return "border-[color-mix(in_srgb,var(--gc-warn)_22%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-warn)_8%,transparent),rgba(255,255,255,0.014))]";
+  }
+
+  if (tone === "offline") {
+    return "border-[color-mix(in_srgb,var(--gc-danger)_20%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-danger)_8%,transparent),rgba(255,255,255,0.014))]";
+  }
+
+  return "border-[color-mix(in_srgb,var(--gc-border)_56%,transparent)] bg-[linear-gradient(180deg,rgba(255,255,255,0.026),rgba(255,255,255,0.012))]";
 }
 
 function getSensorStatus(device: DeviceExtra & { status?: string }) {
-  if (device.sensorStatus) return device.sensorStatus;
+  if (device.sensorStatus) return displayStatus(device.sensorStatus);
   if (device.status === "Offline") return "No signal";
   if (device.status === "Syncing") return "Syncing";
-  return "Pending";
-}
-
-function rawLabel(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value)
-    ? String(value)
-    : "—";
-}
-
-function voltageLabel(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value)
-    ? `${value.toFixed(2)}V`
-    : "—";
+  return "Ready";
 }
 
 function pluralDeviceLabel(count: number) {
   return count === 1 ? "1 device" : `${count} devices`;
 }
 
-function StatusPill({
-  label,
-  tone,
+function SidebarPanel({
+  children,
+  className,
 }: {
-  label: string;
-  tone?: Tone;
+  children: ReactNode;
+  className?: string;
 }) {
+  return (
+    <section
+      className={cn(
+        "relative overflow-hidden rounded-[26px] border border-[color-mix(in_srgb,var(--gc-border)_54%,transparent)] bg-[linear-gradient(180deg,rgba(255,255,255,0.034),rgba(255,255,255,0.014))] shadow-[inset_0_1px_0_rgba(255,255,255,0.018),0_16px_36px_rgba(0,0,0,0.14)] backdrop-blur-xl",
+        className,
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_0%,color-mix(in_srgb,var(--gc-accent)_7%,transparent),transparent_38%),radial-gradient(circle_at_92%_14%,rgba(255,255,255,0.026),transparent_30%)]" />
+      <div className="relative z-10">{children}</div>
+    </section>
+  );
+}
+
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="truncate text-[9px] font-semibold uppercase tracking-[0.24em] text-[var(--gc-muted)]">
+      {children}
+    </p>
+  );
+}
+
+function StatusPill({ label, tone }: { label: string; tone?: Tone }) {
   const visibleLabel = displayStatus(label);
+  const currentTone = tone ?? statusTone(visibleLabel);
 
   return (
     <span
       className={cn(
-        "inline-flex max-w-full rounded-full border px-3 py-1.5 text-xs font-semibold",
-        getToneClass(tone ?? statusTone(visibleLabel)),
+        "inline-flex max-w-full items-center gap-2 rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em]",
+        tonePillClass(currentTone),
       )}
     >
+      <span
+        className={cn(
+          "h-1.5 w-1.5 shrink-0 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.08)]",
+          toneDotClass(currentTone),
+        )}
+      />
       <span className="truncate">{visibleLabel}</span>
     </span>
   );
 }
 
-function CompactMetric({
+function SnapshotMetric({
   label,
   value,
   icon: Icon,
@@ -239,56 +284,25 @@ function CompactMetric({
   return (
     <div
       className={cn(
-        "min-w-0 rounded-[20px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]",
-        tone === "pending"
-          ? "border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)]"
-          : getToneClass(tone),
+        "group relative min-h-[88px] min-w-0 overflow-hidden rounded-[20px] border p-3.5 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(0,0,0,0.14)]",
+        metricToneClass(tone),
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.22em] opacity-75">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_0%,rgba(255,255,255,0.045),transparent_34%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+
+      <div className="relative flex items-start justify-between gap-2">
+        <p className="min-w-0 truncate text-[8px] font-semibold uppercase tracking-[0.18em] text-[var(--gc-muted)]">
           {label}
         </p>
 
-        <Icon className="h-4 w-4 shrink-0 text-[var(--gc-accent-2)]" />
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[12px] border border-white/10 bg-black/14 text-[var(--gc-text)]">
+          <Icon className="h-3.5 w-3.5" />
+        </span>
       </div>
 
-      <p className="mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.5rem,2vw,2rem)] font-semibold leading-none tracking-[-0.05em] text-[var(--gc-text)]">
+      <p className="relative mt-3 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[1.08rem] font-semibold leading-none tracking-[-0.05em] text-[var(--gc-text)]">
         {displayStatus(value)}
       </p>
-    </div>
-  );
-}
-
-function HardwareLine({
-  label,
-  value,
-  icon: Icon,
-  tone,
-}: {
-  label: string;
-  value: string;
-  icon: LucideIcon;
-  tone: Tone;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-3 rounded-[18px] border px-3 py-3",
-        getToneClass(tone),
-      )}
-    >
-      <span className="flex min-w-0 items-center gap-2">
-        <Icon className="h-4 w-4 shrink-0" />
-
-        <span className="truncate text-xs font-semibold uppercase tracking-[0.16em] opacity-75">
-          {label}
-        </span>
-      </span>
-
-      <span className="max-w-[120px] truncate text-sm font-semibold">
-        {displayStatus(value)}
-      </span>
     </div>
   );
 }
@@ -309,39 +323,112 @@ function NavLink({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex items-center justify-between gap-3 rounded-[21px] border px-4 py-3 transition",
+        "group relative flex items-center justify-between gap-3 overflow-hidden rounded-[20px] border px-3 py-2.5 transition duration-300",
         active
-          ? "border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-text)] shadow-[0_0_28px_var(--gc-glow)]"
-          : "border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-white/[0.025] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] hover:bg-white/[0.05] hover:text-[var(--gc-text)]",
+          ? "border-[color-mix(in_srgb,var(--gc-accent)_24%,transparent)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--gc-accent)_12%,transparent),rgba(255,255,255,0.032))] text-[var(--gc-text)] shadow-[0_12px_28px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.028)]"
+          : "border-transparent bg-white/[0.024] text-[var(--gc-soft)] hover:border-[color-mix(in_srgb,var(--gc-border)_54%,transparent)] hover:bg-white/[0.04] hover:text-[var(--gc-text)]",
       )}
     >
-      <span className="flex min-w-0 items-center gap-3">
+      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,color-mix(in_srgb,var(--gc-accent)_7%,transparent),transparent_38%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+
+      <span className="relative flex min-w-0 items-center gap-3">
         <span
           className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-[15px] border transition duration-300",
             active
-              ? "border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_16%,transparent)] text-[var(--gc-accent-2)]"
-              : "border-[color-mix(in_srgb,var(--gc-border)_80%,transparent)] bg-black/16 text-[var(--gc-soft)] group-hover:text-[var(--gc-text)]",
+              ? "border-[color-mix(in_srgb,var(--gc-accent)_22%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)] text-[var(--gc-text)]"
+              : "border-[color-mix(in_srgb,var(--gc-border)_52%,transparent)] bg-black/14 text-[var(--gc-soft)] group-hover:text-[var(--gc-text)]",
           )}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-[17px] w-[17px]" />
         </span>
 
         <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold">{label}</span>
-          <span className="mt-0.5 block truncate text-xs text-[var(--gc-muted)]">
+          <span className="block truncate text-[13px] font-semibold tracking-[-0.025em]">
+            {label}
+          </span>
+
+          <span className="mt-0.5 block truncate text-[10.5px] text-[var(--gc-muted)]">
             {subtitle}
           </span>
         </span>
       </span>
 
       {active ? (
-        <span className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--gc-accent-2)]">
+        <span className="relative shrink-0 rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_24%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)] px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-[var(--gc-text)]">
           On
         </span>
       ) : null}
     </Link>
+  );
+}
+
+function ActionButton({
+  onClick,
+  label,
+  icon: Icon,
+  badge,
+  accent = false,
+}: {
+  onClick: () => void;
+  label: string;
+  icon: LucideIcon;
+  badge?: number;
+  accent?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group relative flex items-center justify-between gap-3 overflow-hidden rounded-[20px] border px-3.5 py-3 text-[13px] font-semibold transition duration-300",
+        accent
+          ? "border-[color-mix(in_srgb,var(--gc-accent)_24%,transparent)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--gc-accent)_12%,transparent),rgba(255,255,255,0.026))] text-[var(--gc-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.026),0_12px_24px_rgba(0,0,0,0.12)]"
+          : "border-[color-mix(in_srgb,var(--gc-border)_54%,transparent)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.014))] text-[var(--gc-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_12px_24px_rgba(0,0,0,0.12)] hover:text-[var(--gc-text)]",
+      )}
+    >
+      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,color-mix(in_srgb,var(--gc-accent)_7%,transparent),transparent_40%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+
+      <span className="relative flex min-w-0 items-center gap-2">
+        <span className="truncate">{label}</span>
+
+        {typeof badge === "number" && badge > 0 ? (
+          <span className="rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_22%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_14%,transparent)] px-2 py-0.5 text-[9px] font-bold text-[var(--gc-text)] shadow-[0_0_16px_var(--gc-glow)]">
+            {badge}
+          </span>
+        ) : null}
+      </span>
+
+      <Icon className="relative h-4 w-4 shrink-0" />
+    </button>
+  );
+}
+
+function MiniStatusCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <div className="rounded-[18px] border border-[color-mix(in_srgb,var(--gc-border)_54%,transparent)] bg-[linear-gradient(180deg,rgba(255,255,255,0.026),rgba(255,255,255,0.012))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.018)]">
+      <span className="flex h-8 w-8 items-center justify-center rounded-[12px] border border-white/10 bg-black/14 text-[var(--gc-text)]">
+        <Icon className="h-4 w-4" />
+      </span>
+
+      <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--gc-muted)]">
+        {label}
+      </p>
+
+      <p className="mt-1 truncate text-[13px] font-semibold text-[var(--gc-text)]">
+        {displayStatus(value)}
+      </p>
+    </div>
   );
 }
 
@@ -353,7 +440,6 @@ export default function AppSidebar() {
     selectedDevice,
     unreadNotifications,
     automation,
-    settings,
     openQuickPanel,
     openNotifications,
   } = useAppState();
@@ -366,94 +452,53 @@ export default function AppSidebar() {
 
   const sensorStatus = getSensorStatus(selectedExtra);
 
-  const relayState =
-    selectedExtra.relayState ??
-    (safeModeActive || !pumpEnabled ? "Locked" : "Enabled");
-
   const pumpState =
     selectedExtra.pumpState ??
-    (safeModeActive || !pumpEnabled ? "Dry-run" : "Ready");
+    (safeModeActive || !pumpEnabled ? "Protected" : "Ready");
 
-  const waterLevelStatus = selectedExtra.waterLevelStatus ?? "Pending";
-  const rainStatus = selectedExtra.rainStatus ?? "Pending";
-  const buttonStatus = selectedExtra.buttonStatus ?? "Pending";
-  const oledStatus = selectedExtra.oledStatus ?? "Pending";
-  const lastCommandStatus = selectedExtra.lastCommandStatus ?? "None";
+  const lastCommandStatus = selectedExtra.lastCommandStatus ?? "Ready";
 
   const moistureLabel = telemetryReady
     ? `${selectedDevice.moisture}%`
-    : "Waiting";
+    : "Ready";
 
-  const rawSoilLabel = telemetryReady ? rawLabel(selectedExtra.rawSoil) : "—";
-
-  const signalLabel = telemetryReady
-    ? `${selectedDevice.signal}%`
-    : "Waiting";
-
-  const soilVoltageValue = voltageLabel(selectedExtra.soilVoltage);
+  const signalLabel = telemetryReady ? `${selectedDevice.signal}%` : "Ready";
 
   const protectionLabel =
-    safeModeActive || !pumpEnabled ? "Protected" : "Output live";
+    safeModeActive || !pumpEnabled ? "Protected" : "Pump live";
 
   const commandLabel = displayStatus(lastCommandStatus);
 
   return (
-    <aside className="relative flex h-full min-h-[calc(100dvh-32px)] max-h-[calc(100dvh-32px)] min-w-0 overflow-hidden rounded-[34px] border border-[color-mix(in_srgb,var(--gc-border)_94%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_84%,black)] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.36),0_0_44px_var(--gc-glow)] backdrop-blur-2xl">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,color-mix(in_srgb,var(--gc-accent-2)_16%,transparent),transparent_28%),radial-gradient(circle_at_80%_28%,color-mix(in_srgb,var(--gc-accent)_12%,transparent),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_34%)]" />
+    <div className="relative flex h-full min-h-[calc(100dvh-32px)] max-h-[calc(100dvh-32px)] min-w-0 overflow-hidden rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_54%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--gc-bg)_76%,black),color-mix(in_srgb,var(--gc-bg)_90%,black))] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.024)] backdrop-blur-2xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,color-mix(in_srgb,var(--gc-accent)_9%,transparent),transparent_36%),radial-gradient(circle_at_82%_12%,rgba(255,255,255,0.024),transparent_28%)]" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/5 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
       <div className="relative z-10 h-full min-h-0 w-full overflow-y-auto overscroll-contain pr-1 gc-scrollbar">
-        <div className="space-y-4 pb-4">
-          <Link
-            href="/"
-            className="group block rounded-[30px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-panel)_84%,transparent)] p-5 transition hover:border-[color-mix(in_srgb,var(--gc-accent)_34%,transparent)] hover:bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)]"
-          >
-            <BrandMark
-              title={settings.workspaceName || "GreenCloud"}
-              subtitle="Smart irrigation workspace"
-            />
-
-            <p className="mt-5 line-clamp-3 text-sm leading-7 text-[var(--gc-soft)]">
-              Pair ESP32 devices, monitor live plant telemetry, and keep pump
-              commands protected from one workspace.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <StatusPill
-                label={pluralDeviceLabel(devices.length)}
-                tone="pending"
+        <div className="space-y-3 pb-3">
+          <Link href="/" className="block">
+            <div className="relative overflow-hidden rounded-[26px] border border-[color-mix(in_srgb,var(--gc-border)_54%,transparent)] bg-[linear-gradient(180deg,rgba(255,255,255,0.038),rgba(255,255,255,0.018))] px-3.5 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.028),0_16px_32px_rgba(0,0,0,0.14)]">
+              <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              <BrandMark
+                title="GreenCloud"
+                subtitle="SMART IRRIGATION WORKSPACE"
+                compact
+                className="w-full"
               />
-              <StatusPill label="Private sync" tone="safe" />
             </div>
           </Link>
 
-          <div className="grid grid-cols-2 gap-3">
-            <CompactMetric
-              label="Moisture"
-              value={moistureLabel}
-              icon={Sprout}
-              tone={telemetryReady ? statusTone(sensorStatus) : "pending"}
-            />
-
-            <CompactMetric
-              label="Signal"
-              value={signalLabel}
-              icon={Wifi}
-              tone={telemetryReady ? "live" : "pending"}
-            />
-          </div>
-
-          <div className="rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
-            <div className="flex items-start justify-between gap-4">
+          <SidebarPanel className="p-3.5">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[var(--gc-muted)]">
-                  Selected device
-                </p>
+                <SectionLabel>Selected device</SectionLabel>
 
-                <h3 className="mt-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,2.4vw,2.5rem)] font-semibold tracking-[-0.06em] text-[var(--gc-text)]">
+                <h3 className="mt-2.5 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[1.28rem] font-semibold leading-none tracking-[-0.055em] text-[var(--gc-text)]">
                   {selectedDevice.name}
                 </h3>
 
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--gc-soft)]">
+                <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--gc-soft)]">
                   {selectedDevice.place}
                 </p>
               </div>
@@ -464,35 +509,43 @@ export default function AppSidebar() {
               />
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <CompactMetric
-                label="Raw"
-                value={rawSoilLabel}
-                icon={Gauge}
-                tone={
-                  !telemetryReady
-                    ? "pending"
-                    : statusTone(sensorStatus) === "warning"
-                      ? "warning"
-                      : "safe"
-                }
+            <div className="mt-3.5 grid grid-cols-2 gap-2.5">
+              <SnapshotMetric
+                label="Moisture"
+                value={moistureLabel}
+                icon={Sprout}
+                tone={telemetryReady ? statusTone(sensorStatus) : "pending"}
               />
 
-              <CompactMetric
+              <SnapshotMetric
+                label="Signal"
+                value={signalLabel}
+                icon={Wifi}
+                tone={telemetryReady ? "live" : "pending"}
+              />
+
+              <SnapshotMetric
+                label="Protect"
+                value={protectionLabel}
+                icon={ShieldCheck}
+                tone={safeModeActive || !pumpEnabled ? "safe" : "warning"}
+              />
+
+              <SnapshotMetric
                 label="Command"
                 value={commandLabel}
-                icon={Radio}
+                icon={Gauge}
                 tone={statusTone(commandLabel)}
               />
             </div>
-          </div>
+          </SidebarPanel>
 
-          <nav className="rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-3">
-            <p className="px-3 pb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--gc-muted)]">
-              Workspace
-            </p>
+          <SidebarPanel className="p-2.5">
+            <div className="px-2 pb-2">
+              <SectionLabel>Workspace</SectionLabel>
+            </div>
 
-            <div className="space-y-2">
+            <nav className="space-y-1.5">
               {mainNavigation.map((item) => {
                 const isActive =
                   item.href === "/"
@@ -510,149 +563,67 @@ export default function AppSidebar() {
                   />
                 );
               })}
-            </div>
-          </nav>
+            </nav>
+          </SidebarPanel>
 
-          <div className="rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
-            <div className="flex items-start justify-between gap-4">
+          <SidebarPanel className="p-3.5">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[var(--gc-muted)]">
-                  Protection
-                </p>
+                <SectionLabel>Workspace status</SectionLabel>
 
-                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-[var(--gc-text)]">
-                  {protectionLabel}
+                <h3 className="mt-2.5 text-[1.24rem] font-semibold leading-none tracking-[-0.055em] text-[var(--gc-text)]">
+                  {pluralDeviceLabel(devices.length)}
                 </h3>
 
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--gc-soft)]">
-                  Pump output stays guarded while safe-mode is active.
+                <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--gc-soft)]">
+                  {automation.mode} mode · threshold{" "}
+                  {automation.moistureThreshold}% · command{" "}
+                  {automation.pumpDurationSeconds}s.
                 </p>
               </div>
 
-              <ShieldCheck className="h-5 w-5 shrink-0 text-[var(--gc-accent-2)]" />
-            </div>
-
-            <div className="mt-4 grid gap-2">
-              <HardwareLine
-                label="Relay"
-                value={relayState}
-                icon={Lock}
-                tone={statusTone(relayState)}
-              />
-
-              <HardwareLine
-                label="Pump"
-                value={pumpState}
-                icon={Droplets}
-                tone={statusTone(pumpState)}
-              />
-
-              <HardwareLine
-                label="Mode"
-                value={automation.mode}
-                icon={SlidersHorizontal}
-                tone="pending"
-              />
-
-              <HardwareLine
-                label="Limit"
-                value={`${automation.moistureThreshold}%`}
-                icon={Gauge}
-                tone="safe"
-              />
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_72%,black)] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[var(--gc-muted)]">
-                  Sensor stack
-                </p>
-
-                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-[var(--gc-text)]">
-                  Hardware health
-                </h3>
-              </div>
-
-              <Cpu className="h-5 w-5 shrink-0 text-[var(--gc-accent-2)]" />
-            </div>
-
-            <div className="mt-4 grid gap-2">
-              <HardwareLine
-                label="Soil"
-                value={sensorStatus}
-                icon={Leaf}
-                tone={statusTone(sensorStatus)}
-              />
-
-              <HardwareLine
-                label="Voltage"
-                value={soilVoltageValue}
-                icon={Zap}
-                tone={soilVoltageValue === "—" ? "pending" : "safe"}
-              />
-
-              <HardwareLine
-                label="OLED"
-                value={oledStatus}
-                icon={Monitor}
-                tone={statusTone(oledStatus)}
-              />
-
-              <HardwareLine
-                label="Tank"
-                value={waterLevelStatus}
-                icon={Waves}
-                tone={statusTone(waterLevelStatus)}
-              />
-
-              <HardwareLine
-                label="Rain"
-                value={rainStatus}
-                icon={CloudRain}
-                tone={statusTone(rainStatus)}
-              />
-
-              <HardwareLine
-                label="Button"
-                value={buttonStatus}
-                icon={ToggleLeft}
-                tone={statusTone(buttonStatus)}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-3">
-            <button
-              type="button"
-              onClick={openQuickPanel}
-              className="premium-btn-secondary flex items-center justify-between gap-3 rounded-[22px] px-4 py-3 text-sm font-semibold"
-            >
-              <span>Quick controls</span>
-              <SlidersHorizontal className="h-4 w-4 shrink-0" />
-            </button>
-
-            <button
-              type="button"
-              onClick={openNotifications}
-              className="premium-btn-secondary flex items-center justify-between gap-3 rounded-[22px] px-4 py-3 text-sm font-semibold"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span>Alerts</span>
-
-                {unreadNotifications > 0 ? (
-                  <span className="rounded-full bg-[var(--gc-accent)] px-2 py-0.5 text-[10px] font-bold text-[#11160d] shadow-[0_0_18px_var(--gc-glow)]">
-                    {unreadNotifications}
-                  </span>
-                ) : null}
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--gc-accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)] text-[var(--gc-text)]">
+                <Lock className="h-3.5 w-3.5" />
               </span>
+            </div>
 
-              <Bell className="h-4 w-4 shrink-0" />
-            </button>
+            <div className="mt-3.5 flex flex-wrap gap-1.5">
+              <StatusPill label={protectionLabel} tone="safe" />
+              <StatusPill label={displayStatus(pumpState)} tone="safe" />
+            </div>
+          </SidebarPanel>
+
+          <div className="grid gap-2.5">
+            <ActionButton
+              onClick={openQuickPanel}
+              label="Quick controls"
+              icon={SlidersHorizontal}
+              accent
+            />
+
+            <ActionButton
+              onClick={openNotifications}
+              label="Alerts"
+              icon={Bell}
+              badge={unreadNotifications}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <MiniStatusCard
+              label="Pump"
+              value={displayStatus(pumpState)}
+              icon={Droplets}
+            />
+
+            <MiniStatusCard
+              label="Guard"
+              value={safeModeActive ? "Active" : "Ready"}
+              icon={ShieldCheck}
+            />
           </div>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
