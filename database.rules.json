@@ -20,6 +20,49 @@
           ".read": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid",
           ".write": false
         }
+      },
+      "deviceCommands": {
+        "$deviceId": {
+          ".read": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid",
+          ".write": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid && newData.exists() && (!data.exists() || data.child('handled').val() === true)",
+          ".validate": "newData.hasChildren(['type', 'irrigate', 'durationSeconds', 'requestId', 'createdAt', 'source', 'safeMode', 'pumpEnabled', 'handled', 'status']) && ((newData.child('type').val() === 'IRRIGATE' && newData.child('irrigate').val() === true && !newData.child('factoryReset').exists()) || (newData.child('type').val() === 'FACTORY_RESET' && newData.child('irrigate').val() === false && newData.child('factoryReset').val() === true)) && newData.child('handled').val() === false && ((newData.child('safeMode').val() === true || newData.child('pumpEnabled').val() === false) && newData.child('status').val() === 'dry-run' || (newData.child('safeMode').val() === false && newData.child('pumpEnabled').val() === true && newData.child('status').val() === 'pending'))",
+          "type": {
+            ".validate": "newData.isString() && (newData.val() === 'IRRIGATE' || newData.val() === 'FACTORY_RESET')"
+          },
+          "factoryReset": {
+            ".validate": "newData.isBoolean()"
+          },
+          "irrigate": {
+            ".validate": "newData.isBoolean()"
+          },
+          "durationSeconds": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 60"
+          },
+          "requestId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
+          },
+          "createdAt": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64"
+          },
+          "source": {
+            ".validate": "newData.isString() && (newData.val() === 'web' || newData.val() === 'automation')"
+          },
+          "safeMode": {
+            ".validate": "newData.isBoolean()"
+          },
+          "pumpEnabled": {
+            ".validate": "newData.isBoolean()"
+          },
+          "handled": {
+            ".validate": "newData.isBoolean() && newData.val() === false"
+          },
+          "status": {
+            ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'dry-run')"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
       }
     }
   }
