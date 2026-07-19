@@ -15,17 +15,63 @@
           ".write": false
         }
       },
+      "deviceActors": {
+        "$deviceId": {
+          ".read": false,
+          ".write": false
+        }
+      },
       "deviceData": {
         "$deviceId": {
           ".read": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid",
-          ".write": false
+          ".write": "auth != null && auth.token.actorType === 'device' && auth.token.deviceId === $deviceId && root.child('greencloud').child('deviceActors').child($deviceId).child('deviceAuthUid').val() === auth.uid && newData.exists()",
+          ".validate": "newData.hasChildren(['deviceId', 'ownerUid', 'lastSeenMs']) && newData.child('deviceId').val() === $deviceId && newData.child('ownerUid').val() === root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val()",
+          "deviceId": {
+            ".validate": "newData.isString() && newData.val() === $deviceId"
+          },
+          "ownerUid": {
+            ".validate": "newData.isString() && newData.val() === root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val()"
+          },
+          "lastSeenMs": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "moisture": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+          },
+          "rawSoil": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "soilVoltage": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5"
+          },
+          "temperature": {
+            ".validate": "newData.isNumber() && newData.val() >= -50 && newData.val() <= 100"
+          },
+          "pressure": {
+            ".validate": "newData.isNumber() && newData.val() >= 300 && newData.val() <= 1200"
+          },
+          "humidity": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+          },
+          "signal": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+          },
+          "rainDetected": {
+            ".validate": "newData.isBoolean()"
+          },
+          "safeMode": {
+            ".validate": "newData.isBoolean()"
+          },
+          "pumpEnabled": {
+            ".validate": "newData.isBoolean()"
+          }
         }
       },
       "deviceCommands": {
         "$deviceId": {
-          ".read": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid",
-          ".write": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid && newData.exists() && (!data.exists() || data.child('handled').val() === true)",
-          ".validate": "newData.hasChildren(['type', 'irrigate', 'durationSeconds', 'requestId', 'createdAt', 'source', 'safeMode', 'pumpEnabled', 'handled', 'status']) && ((newData.child('type').val() === 'IRRIGATE' && newData.child('irrigate').val() === true && !newData.child('factoryReset').exists()) || (newData.child('type').val() === 'FACTORY_RESET' && newData.child('irrigate').val() === false && newData.child('factoryReset').val() === true)) && newData.child('handled').val() === false && ((newData.child('safeMode').val() === true || newData.child('pumpEnabled').val() === false) && newData.child('status').val() === 'dry-run' || (newData.child('safeMode').val() === false && newData.child('pumpEnabled').val() === true && newData.child('status').val() === 'pending'))",
+          ".read": "auth != null && (root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid || (auth.token.actorType === 'device' && auth.token.deviceId === $deviceId && root.child('greencloud').child('deviceActors').child($deviceId).child('deviceAuthUid').val() === auth.uid))",
+          ".write": "auth != null && ((root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid && newData.exists() && (!data.exists() || data.child('handled').val() === true) && newData.child('handled').val() === false) || (auth.token.actorType === 'device' && auth.token.deviceId === $deviceId && root.child('greencloud').child('deviceActors').child($deviceId).child('deviceAuthUid').val() === auth.uid && data.exists() && data.child('handled').val() === false && newData.exists() && newData.child('type').val() === data.child('type').val() && newData.child('factoryReset').val() === data.child('factoryReset').val() && newData.child('durationSeconds').val() === data.child('durationSeconds').val() && newData.child('requestId').val() === data.child('requestId').val() && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('source').val() === data.child('source').val() && newData.child('safeMode').val() === data.child('safeMode').val() && newData.child('pumpEnabled').val() === data.child('pumpEnabled').val() && newData.child('irrigate').val() === false && newData.child('handled').val() === true && newData.child('handledBy').val() === auth.uid && newData.child('handledAt').isString() && (newData.child('status').val() === 'handled' || newData.child('status').val() === 'dry-run' || newData.child('status').val() === 'blocked')))",
+          ".validate": "newData.hasChildren(['type', 'irrigate', 'durationSeconds', 'requestId', 'createdAt', 'source', 'safeMode', 'pumpEnabled', 'handled', 'status']) && ((newData.child('type').val() === 'IRRIGATE' && !newData.child('factoryReset').exists()) || (newData.child('type').val() === 'FACTORY_RESET' && newData.child('factoryReset').val() === true)) && ((newData.child('handled').val() === false && ((newData.child('type').val() === 'IRRIGATE' && newData.child('irrigate').val() === true) || (newData.child('type').val() === 'FACTORY_RESET' && newData.child('irrigate').val() === false)) && !newData.child('handledAt').exists() && !newData.child('handledBy').exists() && (((newData.child('safeMode').val() === true || newData.child('pumpEnabled').val() === false) && newData.child('status').val() === 'dry-run') || (newData.child('safeMode').val() === false && newData.child('pumpEnabled').val() === true && newData.child('status').val() === 'pending'))) || (newData.child('handled').val() === true && newData.child('irrigate').val() === false && newData.child('handledAt').isString() && newData.child('handledBy').isString() && (newData.child('status').val() === 'handled' || newData.child('status').val() === 'dry-run' || newData.child('status').val() === 'blocked')))",
           "type": {
             ".validate": "newData.isString() && (newData.val() === 'IRRIGATE' || newData.val() === 'FACTORY_RESET')"
           },
@@ -54,10 +100,16 @@
             ".validate": "newData.isBoolean()"
           },
           "handled": {
-            ".validate": "newData.isBoolean() && newData.val() === false"
+            ".validate": "newData.isBoolean()"
+          },
+          "handledAt": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64"
+          },
+          "handledBy": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
           },
           "status": {
-            ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'dry-run')"
+            ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'dry-run' || newData.val() === 'handled' || newData.val() === 'blocked')"
           },
           "$other": {
             ".validate": false
