@@ -161,9 +161,11 @@ function getEventCategory(
   return "Info";
 }
 
-function getEventIcon(
-  item: Pick<ActivityLike, "title" | "description" | "status">,
-) {
+function EventIcon({
+  item,
+}: {
+  item: Pick<ActivityLike, "title" | "description" | "status">;
+}) {
   const text = normalizeText(item);
 
   if (
@@ -171,7 +173,7 @@ function getEventIcon(
     text.includes("sync") ||
     text.includes("workspace")
   ) {
-    return Radio;
+    return <Radio className="h-5 w-5" />;
   }
 
   if (
@@ -181,7 +183,7 @@ function getEventIcon(
     text.includes("raw") ||
     text.includes("sensor")
   ) {
-    return Gauge;
+    return <Gauge className="h-5 w-5" />;
   }
 
   if (
@@ -190,7 +192,7 @@ function getEventIcon(
     text.includes("command") ||
     text.includes("irrigation")
   ) {
-    return Droplets;
+    return <Droplets className="h-5 w-5" />;
   }
 
   if (
@@ -200,7 +202,7 @@ function getEventIcon(
     text.includes("locked") ||
     text.includes("dry-run")
   ) {
-    return Lock;
+    return <Lock className="h-5 w-5" />;
   }
 
   if (
@@ -209,14 +211,22 @@ function getEventIcon(
     text.includes("risk") ||
     text.includes("alert")
   ) {
-    return ShieldAlert;
+    return <ShieldAlert className="h-5 w-5" />;
   }
 
-  if (item.status === "Completed") return CheckCircle2;
-  if (item.status === "Waiting") return Clock3;
-  if (item.status === "Manual") return Zap;
+  if (item.status === "Completed") {
+    return <CheckCircle2 className="h-5 w-5" />;
+  }
 
-  return Info;
+  if (item.status === "Waiting") {
+    return <Clock3 className="h-5 w-5" />;
+  }
+
+  if (item.status === "Manual") {
+    return <Zap className="h-5 w-5" />;
+  }
+
+  return <Info className="h-5 w-5" />;
 }
 
 function matchesActivityFilter(
@@ -456,7 +466,6 @@ function EventRow({
   item: ActivityLike;
   index: number;
 }) {
-  const Icon = getEventIcon(item);
   const category = getEventCategory(item);
 
   const categoryTone: Tone =
@@ -480,7 +489,7 @@ function EventRow({
       </div>
 
       <div className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_10%,transparent)] text-[var(--gc-accent-2)] shadow-[0_0_24px_var(--gc-glow)]">
-        <Icon className="h-5 w-5" />
+        <EventIcon item={item} />
       </div>
 
       <div className="min-w-0">

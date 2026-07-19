@@ -169,7 +169,6 @@ export default function DashboardDeviceCard({
   const safeMode = current.safeMode ?? true;
   const pumpEnabled = current.pumpEnabled ?? false;
 
-  const moistureLabel = hasTelemetry ? `${moisture}%` : "Waiting";
   const signalLabel = hasTelemetry ? `${signal}%` : "Waiting";
   const climateLabel =
     hasTelemetry && temp !== 0 ? `${temp}°C · ${humidity}%` : "Waiting";

@@ -8,7 +8,6 @@ import {
   Copy,
   Cpu,
   Droplets,
-  Gauge,
   KeyRound,
   Leaf,
   Lock,
