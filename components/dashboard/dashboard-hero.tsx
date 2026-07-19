@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Droplets,
   Gauge,
-  Leaf,
   RefreshCw,
   ShieldCheck,
   SlidersHorizontal,

@@ -11,7 +11,6 @@ import {
   Cpu,
   Droplets,
   Gauge,
-  Leaf,
   Lock,
   Radio,
   RefreshCw,
