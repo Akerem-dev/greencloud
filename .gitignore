@@ -42,3 +42,8 @@ next-env.d.ts
 
 # committed environment template
 !.env.example
+# Firebase local emulator
+.firebase/
+firebase-debug.log*
+database-debug.log*
+ui-debug.log*
