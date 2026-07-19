@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:firebase-rules": "firebase emulators:exec --only database --project demo-greencloud \"node --test tests/firebase/database.rules.test.mjs\""
+    "test:firebase-rules": "firebase emulators:exec --only database --project demo-greencloud \"node --test tests/firebase/database.rules.test.mjs tests/firebase/pairing.rules.test.mjs\""
   },
   "dependencies": {
     "firebase": "12.16.0",
