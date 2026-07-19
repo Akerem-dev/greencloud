@@ -21,6 +21,34 @@
           ".write": false
         }
       },
+      "pairings": {
+        "$pairingCode": {
+          ".read": "auth != null && data.exists() && ((data.child('status').val() === 'available' && data.child('expiresAtMs').val() > now) || data.child('ownerUid').val() === auth.uid || (auth.token.actorType === 'device' && auth.token.deviceId === data.child('deviceId').val() && root.child('greencloud').child('deviceActors').child(data.child('deviceId').val()).child('deviceAuthUid').val() === auth.uid))",
+          ".write": "auth != null && auth.token.actorType === 'device' && auth.token.deviceId === newData.child('deviceId').val() && root.child('greencloud').child('deviceActors').child(auth.token.deviceId).child('deviceAuthUid').val() === auth.uid && !data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['code', 'deviceId', 'deviceAuthUid', 'status', 'createdAtMs', 'expiresAtMs']) && newData.child('code').val() === $pairingCode && newData.child('deviceId').val() === auth.token.deviceId && newData.child('deviceAuthUid').val() === auth.uid && newData.child('status').val() === 'available' && !newData.child('ownerUid').exists() && !newData.child('pairedAtMs').exists() && newData.child('createdAtMs').val() <= now && newData.child('expiresAtMs').val() > now && newData.child('expiresAtMs').val() > newData.child('createdAtMs').val() && newData.child('expiresAtMs').val() <= newData.child('createdAtMs').val() + 900000",
+          "code": {
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{6}$/) && newData.val() === $pairingCode"
+          },
+          "deviceId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128 && newData.val() === auth.token.deviceId"
+          },
+          "deviceAuthUid": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128 && newData.val() === auth.uid"
+          },
+          "status": {
+            ".validate": "newData.isString() && newData.val() === 'available'"
+          },
+          "createdAtMs": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "expiresAtMs": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
       "deviceData": {
         "$deviceId": {
           ".read": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid",
