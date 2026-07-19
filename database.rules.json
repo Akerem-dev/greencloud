@@ -8,6 +8,18 @@
           ".read": "auth != null && auth.uid === $uid",
           ".write": "auth != null && auth.uid === $uid"
         }
+      },
+      "deviceOwners": {
+        "$deviceId": {
+          ".read": false,
+          ".write": false
+        }
+      },
+      "deviceData": {
+        "$deviceId": {
+          ".read": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid",
+          ".write": false
+        }
       }
     }
   }

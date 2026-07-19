@@ -16,6 +16,14 @@ function userPath(userId) {
   return `${GREENCLOUD_ROOT}/users/${userId}`;
 }
 
+function deviceOwnerPath(deviceId) {
+  return `${GREENCLOUD_ROOT}/deviceOwners/${deviceId}`;
+}
+
+function deviceDataPath(deviceId) {
+  return `${GREENCLOUD_ROOT}/deviceData/${deviceId}`;
+}
+
 before(async () => {
   const rules = await readFile(
     new URL("../../database.rules.json", import.meta.url),
@@ -34,6 +42,33 @@ before(async () => {
 
 beforeEach(async () => {
   await testEnv.clearDatabase();
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const database = context.database();
+
+    await set(ref(database, GREENCLOUD_ROOT), {
+      deviceOwners: {
+        "device-a": {
+          ownerUid: "user-a",
+        },
+        "device-b": {
+          ownerUid: "user-b",
+        },
+      },
+      deviceData: {
+        "device-a": {
+          deviceId: "device-a",
+          ownerUid: "user-a",
+          moisture: 42,
+        },
+        "device-b": {
+          deviceId: "device-b",
+          ownerUid: "user-b",
+          moisture: 67,
+        },
+      },
+    });
+  });
 });
 
 after(async () => {
@@ -94,11 +129,55 @@ test("authenticated user cannot list all user workspaces", async () => {
   await assertFails(get(ref(database, `${GREENCLOUD_ROOT}/users`)));
 });
 
-test("authenticated user cannot read global device data", async () => {
+test("device owner can read their device telemetry", async () => {
+  const database = testEnv.authenticatedContext("user-a").database();
+
+  await assertSucceeds(get(ref(database, deviceDataPath("device-a"))));
+});
+
+test("user cannot read another owners device telemetry", async () => {
+  const database = testEnv.authenticatedContext("user-a").database();
+
+  await assertFails(get(ref(database, deviceDataPath("device-b"))));
+});
+
+test("unauthenticated user cannot read owned device telemetry", async () => {
+  const database = testEnv.unauthenticatedContext().database();
+
+  await assertFails(get(ref(database, deviceDataPath("device-a"))));
+});
+
+test("device owner cannot write telemetry from the web client", async () => {
   const database = testEnv.authenticatedContext("user-a").database();
 
   await assertFails(
-    get(ref(database, `${GREENCLOUD_ROOT}/deviceData/device-a`)),
+    set(ref(database, deviceDataPath("device-a")), {
+      deviceId: "device-a",
+      ownerUid: "user-a",
+      moisture: 99,
+    }),
+  );
+});
+
+test("authenticated user cannot list all device telemetry", async () => {
+  const database = testEnv.authenticatedContext("user-a").database();
+
+  await assertFails(get(ref(database, `${GREENCLOUD_ROOT}/deviceData`)));
+});
+
+test("authenticated user cannot read canonical ownership records", async () => {
+  const database = testEnv.authenticatedContext("user-a").database();
+
+  await assertFails(get(ref(database, deviceOwnerPath("device-a"))));
+});
+
+test("authenticated user cannot replace canonical ownership", async () => {
+  const database = testEnv.authenticatedContext("user-a").database();
+
+  await assertFails(
+    set(ref(database, deviceOwnerPath("device-b")), {
+      ownerUid: "user-a",
+    }),
   );
 });
 
