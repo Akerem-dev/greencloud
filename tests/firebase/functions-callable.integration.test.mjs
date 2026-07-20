@@ -67,6 +67,13 @@ function approvedState(requesterUid) {
   };
 }
 
+function normalizeEmptyCollections(state) {
+  return {
+    ...state,
+    deviceOwners: state?.deviceOwners ?? {},
+  };
+}
+
 async function assertCallableError(code, operation) {
   await assert.rejects(operation, (error) => {
     assert.equal(error.code, `functions/${code}`);
@@ -135,7 +142,7 @@ test("rejects an unauthenticated callable request without changing RTDB", async 
     finalizePairing({ pairingCode: "ABC123" }),
   );
 
-  assert.deepEqual((await rootRef.get()).val(), state);
+  assert.deepEqual(normalizeEmptyCollections((await rootRef.get()).val()), state);
 });
 
 test("finalizes pairing through Auth and Functions emulators", async () => {
@@ -174,7 +181,7 @@ test("rejects a caller who does not own the approved claim", async () => {
     finalizePairing({ pairingCode: "ABC123" }),
   );
 
-  assert.deepEqual((await rootRef.get()).val(), state);
+  assert.deepEqual(normalizeEmptyCollections((await rootRef.get()).val()), state);
 });
 
 test("keeps repeated authenticated callable finalization idempotent", async () => {
