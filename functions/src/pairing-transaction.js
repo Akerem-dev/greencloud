@@ -6,39 +6,52 @@ const {
 } = require("./pairing-finalization");
 
 async function finalizePairingTransaction(rootRef, input) {
-  if (!rootRef || typeof rootRef.transaction !== "function") {
+  if (
+    !rootRef ||
+    typeof rootRef.get !== "function" ||
+    typeof rootRef.transaction !== "function"
+  ) {
     throw new PairingFinalizationError(
       "internal",
       "A valid GreenCloud database root reference is required.",
     );
   }
 
+  const initialState = (await rootRef.get()).val();
+  let firstInvocation = true;
   let finalResult;
+  let transactionError;
+
   const transaction = await rootRef.transaction(
     (currentState) => {
-      // RTDB can invoke a transaction with null before the remote value is in
-      // the local cache. Returning that null value lets the server reject the
-      // stale attempt and retry with its current state. It also avoids
-      // rebuilding deleted data from a stale pre-transaction snapshot.
-      finalResult = undefined;
-      if (currentState == null) {
-        return currentState;
-      }
+      const stateForAttempt =
+        firstInvocation && currentState == null && initialState != null
+          ? initialState
+          : currentState;
 
-      const transition = finalizePairingState(currentState, input);
-      finalResult = transition.result;
-      return transition.state;
+      firstInvocation = false;
+      finalResult = undefined;
+      transactionError = undefined;
+
+      try {
+        const transition = finalizePairingState(stateForAttempt, input);
+        finalResult = transition.result;
+        return transition.state;
+      } catch (error) {
+        // Throwing from an RTDB transaction callback can leave the transaction
+        // promise unresolved. Abort this attempt cleanly, then rethrow the same
+        // domain error after the transaction has finished.
+        transactionError = error;
+        return undefined;
+      }
     },
     undefined,
     false,
   );
 
   if (!transaction.committed || !finalResult) {
-    const committedState = transaction.snapshot?.val?.();
-
-    // Preserve the domain-specific error when the database really is empty.
-    if (committedState == null) {
-      finalizePairingState(committedState, input);
+    if (transactionError) {
+      throw transactionError;
     }
 
     throw new PairingFinalizationError(
