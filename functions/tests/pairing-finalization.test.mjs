@@ -4,6 +4,7 @@ import module from "../src/pairing-finalization.js";
 
 const { PairingFinalizationError, finalizePairingState } = module;
 const NOW = 1_721_500_000_000;
+const PAIRED_AT = new Date(NOW).toISOString();
 
 function approvedState(overrides = {}) {
   return {
@@ -19,6 +20,7 @@ function approvedState(overrides = {}) {
         status: "available",
         createdAtMs: NOW - 1_000,
         expiresAtMs: NOW + 600_000,
+        firmware: "greencloud-esp32",
       },
     },
     pairingClaims: {
@@ -54,11 +56,14 @@ function assertError(code, operation) {
   });
 }
 
-test("finalizes an approved pairing atomically in state", () => {
+test("finalizes ownership and user workspace projection atomically", () => {
   const original = approvedState();
   const { state, result } = finalize(original);
+  const workspace = state.users["user-a"];
+  const device = workspace.devices["device-a"];
 
   assert.equal(original.deviceOwners["device-a"], undefined);
+  assert.equal(original.users, undefined);
   assert.deepEqual(state.deviceOwners["device-a"], {
     ownerUid: "user-a",
     assignedAtMs: NOW,
@@ -68,7 +73,35 @@ test("finalizes an approved pairing atomically in state", () => {
   assert.equal(state.pairings.ABC123.ownerUid, "user-a");
   assert.equal(state.pairingClaims.ABC123.status, "finalized");
   assert.equal(state.pairingClaims.ABC123.finalizedBy, "user-a");
+
+  assert.equal(device.id, "device-a");
+  assert.equal(device.name, "GreenCloud Device");
+  assert.equal(device.place, "Plant zone");
+  assert.equal(device.ownerUid, "user-a");
+  assert.equal(device.pairingCode, "ABC123");
+  assert.equal(device.pairedAt, PAIRED_AT);
+  assert.equal(workspace.selectedDeviceId, "device-a");
+  assert.equal(workspace.pairings.ABC123.status, "paired");
+  assert.equal(workspace.pairings.ABC123.ownerUid, "user-a");
+  assert.equal(workspace.meta.schemaVersion, 9);
+  assert.equal(workspace.meta.lastPairingAt, PAIRED_AT);
+
   assert.equal(result.idempotent, false);
+  assert.equal(result.workspaceProjected, true);
+  assert.deepEqual(result.device, device);
+});
+
+test("projects trimmed custom device labels", () => {
+  const { state, result } = finalize(approvedState(), {
+    deviceName: "  Patio Basil  ",
+    devicePlace: "  South Balcony  ",
+  });
+  const device = state.users["user-a"].devices["device-a"];
+
+  assert.equal(device.name, "Patio Basil");
+  assert.equal(device.place, "South Balcony");
+  assert.equal(device.location, "South Balcony");
+  assert.equal(result.device.name, "Patio Basil");
 });
 
 test("normalizes a lowercase pairing code", () => {
@@ -79,6 +112,18 @@ test("normalizes a lowercase pairing code", () => {
 test("rejects an invalid pairing code", () => {
   assertError("invalid-argument", () =>
     finalize(approvedState(), { pairingCode: "bad" }),
+  );
+});
+
+test("rejects a non-string device name", () => {
+  assertError("invalid-argument", () =>
+    finalize(approvedState(), { deviceName: { unsafe: true } }),
+  );
+});
+
+test("rejects an oversized device place", () => {
+  assertError("invalid-argument", () =>
+    finalize(approvedState(), { devicePlace: "x".repeat(121) }),
   );
 });
 
@@ -122,31 +167,53 @@ test("rejects a device already owned by someone else", () => {
   assertError("already-exists", () => finalize(state));
 });
 
-test("returns an idempotent result for the same finalized owner", () => {
+test("rejects a conflicting user workspace device projection", () => {
   const state = approvedState({
-    deviceOwners: {
-      "device-a": {
-        ownerUid: "user-a",
-        assignedAtMs: NOW - 10,
-        source: "pairing",
+    users: {
+      "user-a": {
+        devices: {
+          "device-a": {
+            id: "device-a",
+            ownerUid: "user-b",
+          },
+        },
       },
     },
   });
-  state.pairings.ABC123 = {
-    ...state.pairings.ABC123,
-    status: "paired",
-    ownerUid: "user-a",
-    pairedAtMs: NOW - 10,
-  };
-  state.pairingClaims.ABC123 = {
-    ...state.pairingClaims.ABC123,
-    status: "finalized",
-    finalizedAtMs: NOW - 10,
-    finalizedBy: "user-a",
-  };
 
-  const { state: nextState, result } = finalize(state);
-  assert.equal(nextState, state);
+  assertError("failed-precondition", () => finalize(state));
+});
+
+test("repairs a missing workspace projection for an already finalized owner", () => {
+  const { state: finalizedState } = finalize();
+  delete finalizedState.users;
+
+  const { state, result } = finalize(finalizedState, { nowMs: NOW + 100 });
+
+  assert.notEqual(state, finalizedState);
   assert.equal(result.idempotent, true);
-  assert.equal(result.finalizedAtMs, NOW - 10);
+  assert.equal(result.finalizedAtMs, NOW);
+  assert.equal(state.users["user-a"].devices["device-a"].ownerUid, "user-a");
+  assert.equal(state.users["user-a"].selectedDeviceId, "device-a");
+  assert.equal(state.users["user-a"].meta.lastPairingAt, PAIRED_AT);
+});
+
+test("returns the same state for a complete idempotent projection", () => {
+  const { state: finalizedState } = finalize(approvedState(), {
+    deviceName: "Patio Basil",
+    devicePlace: "South Balcony",
+  });
+
+  const { state: nextState, result } = finalize(finalizedState, {
+    nowMs: NOW + 100,
+    deviceName: "Do not overwrite",
+    devicePlace: "Do not overwrite",
+  });
+
+  assert.equal(nextState, finalizedState);
+  assert.equal(result.idempotent, true);
+  assert.equal(result.finalizedAtMs, NOW);
+  assert.equal(result.device.name, "Patio Basil");
+  assert.equal(result.device.place, "South Balcony");
+  assert.equal(finalizedState.deviceOwners["device-a"].assignedAtMs, NOW);
 });
