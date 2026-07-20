@@ -49,6 +49,40 @@
           }
         }
       },
+      "pairingClaims": {
+        "$pairingCode": {
+          ".read": "auth != null && data.exists() && (data.child('requestedByUid').val() === auth.uid || (auth.token.actorType === 'device' && auth.token.deviceId === data.child('deviceId').val() && root.child('greencloud').child('deviceActors').child(data.child('deviceId').val()).child('deviceAuthUid').val() === auth.uid))",
+          ".write": "auth != null && (((auth.token.actorType !== 'device') && !data.exists() && newData.exists() && root.child('greencloud').child('pairings').child($pairingCode).exists() && root.child('greencloud').child('pairings').child($pairingCode).child('status').val() === 'available' && root.child('greencloud').child('pairings').child($pairingCode).child('expiresAtMs').val() > now && newData.child('code').val() === $pairingCode && newData.child('deviceId').val() === root.child('greencloud').child('pairings').child($pairingCode).child('deviceId').val() && newData.child('requestedByUid').val() === auth.uid && newData.child('status').val() === 'pending' && newData.child('expiresAtMs').val() === root.child('greencloud').child('pairings').child($pairingCode).child('expiresAtMs').val()) || (auth.token.actorType === 'device' && auth.token.deviceId === data.child('deviceId').val() && root.child('greencloud').child('deviceActors').child(data.child('deviceId').val()).child('deviceAuthUid').val() === auth.uid && data.exists() && data.child('status').val() === 'pending' && newData.exists() && newData.child('code').val() === data.child('code').val() && newData.child('deviceId').val() === data.child('deviceId').val() && newData.child('requestedByUid').val() === data.child('requestedByUid').val() && newData.child('createdAtMs').val() === data.child('createdAtMs').val() && newData.child('expiresAtMs').val() === data.child('expiresAtMs').val() && newData.child('decidedByUid').val() === auth.uid && newData.child('decidedAtMs').isNumber() && newData.child('decidedAtMs').val() > 0 && newData.child('decidedAtMs').val() <= now && (newData.child('status').val() === 'rejected' || (newData.child('status').val() === 'approved' && root.child('greencloud').child('pairings').child($pairingCode).child('status').val() === 'available' && root.child('greencloud').child('pairings').child($pairingCode).child('deviceId').val() === data.child('deviceId').val() && root.child('greencloud').child('pairings').child($pairingCode).child('expiresAtMs').val() > now))))",
+          ".validate": "newData.hasChildren(['code', 'deviceId', 'requestedByUid', 'status', 'createdAtMs', 'expiresAtMs']) && newData.child('code').val() === $pairingCode && ((newData.child('status').val() === 'pending' && !newData.child('decidedByUid').exists() && !newData.child('decidedAtMs').exists()) || ((newData.child('status').val() === 'approved' || newData.child('status').val() === 'rejected') && newData.child('decidedByUid').isString() && newData.child('decidedAtMs').isNumber()))",
+          "code": {
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{6}$/) && newData.val() === $pairingCode"
+          },
+          "deviceId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
+          },
+          "requestedByUid": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
+          },
+          "status": {
+            ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected')"
+          },
+          "createdAtMs": {
+            ".validate": "newData.isNumber() && newData.val() > 0 && ((data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() <= now && newData.val() >= now - 300000))"
+          },
+          "expiresAtMs": {
+            ".validate": "newData.isNumber() && newData.val() > now"
+          },
+          "decidedByUid": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
+          },
+          "decidedAtMs": {
+            ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
       "deviceData": {
         "$deviceId": {
           ".read": "auth != null && root.child('greencloud').child('deviceOwners').child($deviceId).child('ownerUid').val() === auth.uid",
