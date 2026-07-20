@@ -11,7 +11,7 @@
     "test:functions": "npm --prefix functions test",
     "test:functions-integration": "firebase emulators:exec --only database --project demo-greencloud \"npm --prefix functions run test:integration\"",
     "test:functions-callable": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"node --test --test-concurrency=1 tests/firebase/functions-callable.integration.test.mjs\"",
-    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration"
+    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable"
   },
   "dependencies": {
     "firebase": "12.16.0",
