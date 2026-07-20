@@ -27,12 +27,12 @@ function approvedState(overrides = {}) {
       ABC123: {
         code: "ABC123",
         deviceId: "device-a",
-        requesterUid: "user-a",
+        requestedByUid: "user-a",
         status: "approved",
-        requestedAtMs: NOW - 500,
-        pairingExpiresAtMs: NOW + 600_000,
+        createdAtMs: NOW - 500,
+        expiresAtMs: NOW + 600_000,
         decidedAtMs: NOW - 100,
-        decidedBy: "device-auth-a",
+        decidedByUid: "device-auth-a",
       },
     },
     ...overrides,
@@ -73,6 +73,8 @@ test("finalizes ownership and user workspace projection atomically", () => {
   assert.equal(state.pairings.ABC123.ownerUid, "user-a");
   assert.equal(state.pairingClaims.ABC123.status, "finalized");
   assert.equal(state.pairingClaims.ABC123.finalizedBy, "user-a");
+  assert.equal(state.pairingClaims.ABC123.requestedByUid, "user-a");
+  assert.equal(state.pairingClaims.ABC123.decidedByUid, "device-auth-a");
 
   assert.equal(device.id, "device-a");
   assert.equal(device.name, "GreenCloud Device");
@@ -127,6 +129,22 @@ test("rejects an oversized device place", () => {
   );
 });
 
+test("rejects legacy pairing claim field aliases", () => {
+  const state = approvedState();
+  const claim = state.pairingClaims.ABC123;
+
+  delete claim.requestedByUid;
+  delete claim.createdAtMs;
+  delete claim.expiresAtMs;
+  delete claim.decidedByUid;
+  claim.requesterUid = "user-a";
+  claim.requestedAtMs = NOW - 500;
+  claim.pairingExpiresAtMs = NOW + 600_000;
+  claim.decidedBy = "device-auth-a";
+
+  assertError("failed-precondition", () => finalize(state));
+});
+
 test("rejects a requester who does not own the claim", () => {
   assertError("permission-denied", () =>
     finalize(approvedState(), { requesterUid: "user-b" }),
@@ -142,13 +160,19 @@ test("rejects a claim that was not approved", () => {
 test("rejects an expired pairing", () => {
   const state = approvedState();
   state.pairings.ABC123.expiresAtMs = NOW - 1;
-  state.pairingClaims.ABC123.pairingExpiresAtMs = NOW - 1;
+  state.pairingClaims.ABC123.expiresAtMs = NOW - 1;
   assertError("deadline-exceeded", () => finalize(state));
 });
 
 test("rejects a mismatched device approval identity", () => {
   const state = approvedState();
-  state.pairingClaims.ABC123.decidedBy = "different-device";
+  state.pairingClaims.ABC123.decidedByUid = "different-device";
+  assertError("failed-precondition", () => finalize(state));
+});
+
+test("rejects a future device decision timestamp", () => {
+  const state = approvedState();
+  state.pairingClaims.ABC123.decidedAtMs = NOW + 1;
   assertError("failed-precondition", () => finalize(state));
 });
 
