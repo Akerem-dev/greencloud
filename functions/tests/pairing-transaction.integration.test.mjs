@@ -58,12 +58,14 @@ function finalize(input = {}) {
 }
 
 before(() => {
-  process.env.FIREBASE_DATABASE_EMULATOR_HOST ??= "127.0.0.1:9000";
+  const emulatorHost =
+    process.env.FIREBASE_DATABASE_EMULATOR_HOST ?? "127.0.0.1:9000";
+  process.env.FIREBASE_DATABASE_EMULATOR_HOST = emulatorHost;
 
   app = initializeApp(
     {
       projectId: PROJECT_ID,
-      databaseURL: `https://${PROJECT_ID}-default-rtdb.firebaseio.com`,
+      databaseURL: `http://${emulatorHost}?ns=${PROJECT_ID}`,
     },
     APP_NAME,
   );
