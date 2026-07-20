@@ -9,6 +9,13 @@ import {
   signOut,
 } from "firebase/auth";
 import {
+  connectDatabaseEmulator,
+  getDatabase as getClientDatabase,
+  goOffline,
+  ref as clientRef,
+  set as clientSet,
+} from "firebase/database";
+import {
   connectFunctionsEmulator,
   getFunctions,
   httpsCallable,
@@ -21,7 +28,9 @@ const {
   deleteApp: deleteAdminApp,
   initializeApp: initializeAdminApp,
 } = requireFunctions("firebase-admin/app");
-const { getDatabase } = requireFunctions("firebase-admin/database");
+const { getDatabase: getAdminDatabase } = requireFunctions(
+  "firebase-admin/database",
+);
 
 const PROJECT_ID = "demo-greencloud";
 const CLIENT_APP_NAME = "callable-auth-integration-client";
@@ -31,10 +40,11 @@ const DATABASE_URL = `http://127.0.0.1:9000?ns=${PROJECT_ID}`;
 let clientApp;
 let adminApp;
 let auth;
+let clientDatabase;
 let rootRef;
 let finalizePairing;
 
-function approvedState(requesterUid) {
+function availableState() {
   const nowMs = Date.now();
 
   return {
@@ -53,16 +63,25 @@ function approvedState(requesterUid) {
         firmware: "greencloud-esp32",
       },
     },
+  };
+}
+
+function approvedState(requestedByUid) {
+  const state = availableState();
+  const nowMs = Date.now();
+
+  return {
+    ...state,
     pairingClaims: {
       ABC123: {
         code: "ABC123",
         deviceId: "device-a",
-        requesterUid,
+        requestedByUid,
         status: "approved",
-        requestedAtMs: nowMs - 500,
-        pairingExpiresAtMs: nowMs + 600_000,
+        createdAtMs: nowMs - 500,
+        expiresAtMs: state.pairings.ABC123.expiresAtMs,
         decidedAtMs: nowMs - 100,
-        decidedBy: "device-auth-a",
+        decidedByUid: "device-auth-a",
       },
     },
   };
@@ -93,12 +112,13 @@ before(() => {
     },
     ADMIN_APP_NAME,
   );
-  rootRef = getDatabase(adminApp).ref("greencloud");
+  rootRef = getAdminDatabase(adminApp).ref("greencloud");
 
   clientApp = initializeApp(
     {
       apiKey: "demo-api-key",
       authDomain: `${PROJECT_ID}.firebaseapp.com`,
+      databaseURL: DATABASE_URL,
       projectId: PROJECT_ID,
     },
     CLIENT_APP_NAME,
@@ -108,6 +128,9 @@ before(() => {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", {
     disableWarnings: true,
   });
+
+  clientDatabase = getClientDatabase(clientApp);
+  connectDatabaseEmulator(clientDatabase, "127.0.0.1", 9000);
 
   const functions = getFunctions(clientApp, "europe-west1");
   connectFunctionsEmulator(functions, "127.0.0.1", 5001);
@@ -122,6 +145,9 @@ beforeEach(async () => {
 after(async () => {
   if (auth) {
     await signOut(auth);
+  }
+  if (clientDatabase) {
+    goOffline(clientDatabase);
   }
   if (rootRef) {
     await rootRef.remove();
@@ -171,6 +197,8 @@ test("finalizes pairing and projects the authenticated user workspace", async ()
   assert.equal(state.deviceOwners["device-a"].ownerUid, requesterUid);
   assert.equal(state.pairings.ABC123.status, "paired");
   assert.equal(state.pairingClaims.ABC123.status, "finalized");
+  assert.equal(state.pairingClaims.ABC123.requestedByUid, requesterUid);
+  assert.equal(state.pairingClaims.ABC123.decidedByUid, "device-auth-a");
   assert.equal(device.id, "device-a");
   assert.equal(device.name, "Patio Basil");
   assert.equal(device.place, "South Balcony");
@@ -179,6 +207,63 @@ test("finalizes pairing and projects the authenticated user workspace", async ()
   assert.equal(workspace.selectedDeviceId, "device-a");
   assert.equal(workspace.pairings.ABC123.status, "paired");
   assert.equal(workspace.meta.schemaVersion, 9);
+});
+
+test("creates a rules-compliant claim and finalizes the same record", async () => {
+  const credential = await signInAnonymously(auth);
+  const requestedByUid = credential.user.uid;
+  const state = availableState();
+  const pairing = state.pairings.ABC123;
+
+  await rootRef.set(state);
+
+  const pendingClaim = {
+    code: "ABC123",
+    deviceId: pairing.deviceId,
+    requestedByUid,
+    status: "pending",
+    createdAtMs: Date.now(),
+    expiresAtMs: pairing.expiresAtMs,
+  };
+
+  await clientSet(
+    clientRef(clientDatabase, "greencloud/pairingClaims/ABC123"),
+    pendingClaim,
+  );
+
+  assert.deepEqual(
+    (await rootRef.child("pairingClaims/ABC123").get()).val(),
+    pendingClaim,
+  );
+
+  await rootRef.child("pairingClaims/ABC123").update({
+    status: "approved",
+    decidedAtMs: Date.now(),
+    decidedByUid: "device-auth-a",
+  });
+
+  const response = await finalizePairing({
+    pairingCode: "ABC123",
+    name: "Rules Contract Device",
+    place: "Test Bench",
+  });
+  const finalizedState = (await rootRef.get()).val();
+
+  assert.equal(response.data.ownerUid, requestedByUid);
+  assert.equal(response.data.idempotent, false);
+  assert.equal(finalizedState.pairingClaims.ABC123.status, "finalized");
+  assert.equal(
+    finalizedState.pairingClaims.ABC123.requestedByUid,
+    requestedByUid,
+  );
+  assert.equal(
+    finalizedState.pairingClaims.ABC123.decidedByUid,
+    "device-auth-a",
+  );
+  assert.equal(
+    finalizedState.users[requestedByUid].devices["device-a"].name,
+    "Rules Contract Device",
+  );
 });
 
 test("maps invalid callable pairing input to invalid-argument", async () => {
