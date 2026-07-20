@@ -50,6 +50,7 @@ function approvedState(requesterUid) {
         status: "available",
         createdAtMs: nowMs - 1_000,
         expiresAtMs: nowMs + 600_000,
+        firmware: "greencloud-esp32",
       },
     },
     pairingClaims: {
@@ -145,29 +146,59 @@ test("rejects an unauthenticated callable request without changing RTDB", async 
   assert.deepEqual(normalizeEmptyCollections((await rootRef.get()).val()), state);
 });
 
-test("finalizes pairing through Auth and Functions emulators", async () => {
+test("finalizes pairing and projects the authenticated user workspace", async () => {
   const credential = await signInAnonymously(auth);
   const requesterUid = credential.user.uid;
   await rootRef.set(approvedState(requesterUid));
 
-  const response = await finalizePairing({ pairingCode: "abc123" });
+  const response = await finalizePairing({
+    pairingCode: "abc123",
+    name: "  Patio Basil  ",
+    place: "  South Balcony  ",
+  });
   const state = (await rootRef.get()).val();
+  const workspace = state.users[requesterUid];
+  const device = workspace.devices["device-a"];
 
   assert.equal(response.data.pairingCode, "ABC123");
   assert.equal(response.data.ownerUid, requesterUid);
   assert.equal(response.data.deviceId, "device-a");
   assert.equal(response.data.idempotent, false);
+  assert.equal(response.data.workspaceProjected, true);
+  assert.equal(response.data.device.name, "Patio Basil");
+  assert.equal(response.data.device.place, "South Balcony");
+
   assert.equal(state.deviceOwners["device-a"].ownerUid, requesterUid);
   assert.equal(state.pairings.ABC123.status, "paired");
   assert.equal(state.pairingClaims.ABC123.status, "finalized");
+  assert.equal(device.id, "device-a");
+  assert.equal(device.name, "Patio Basil");
+  assert.equal(device.place, "South Balcony");
+  assert.equal(device.ownerUid, requesterUid);
+  assert.equal(device.pairingCode, "ABC123");
+  assert.equal(workspace.selectedDeviceId, "device-a");
+  assert.equal(workspace.pairings.ABC123.status, "paired");
+  assert.equal(workspace.meta.schemaVersion, 9);
 });
 
-test("maps invalid callable input to invalid-argument", async () => {
+test("maps invalid callable pairing input to invalid-argument", async () => {
   await signInAnonymously(auth);
 
   await assertCallableError(
     "invalid-argument",
     finalizePairing({ pairingCode: "bad" }),
+  );
+});
+
+test("maps oversized workspace labels to invalid-argument", async () => {
+  await signInAnonymously(auth);
+
+  await assertCallableError(
+    "invalid-argument",
+    finalizePairing({
+      pairingCode: "ABC123",
+      name: "x".repeat(81),
+    }),
   );
 });
 
@@ -189,10 +220,23 @@ test("keeps repeated authenticated callable finalization idempotent", async () =
   const requesterUid = credential.user.uid;
   await rootRef.set(approvedState(requesterUid));
 
-  const first = await finalizePairing({ pairingCode: "ABC123" });
-  const second = await finalizePairing({ pairingCode: "ABC123" });
+  const first = await finalizePairing({
+    pairingCode: "ABC123",
+    name: "Patio Basil",
+    place: "South Balcony",
+  });
+  const second = await finalizePairing({
+    pairingCode: "ABC123",
+    name: "Do not overwrite",
+    place: "Do not overwrite",
+  });
+  const state = (await rootRef.get()).val();
 
   assert.equal(first.data.idempotent, false);
   assert.equal(second.data.idempotent, true);
   assert.equal(second.data.finalizedAtMs, first.data.finalizedAtMs);
+  assert.equal(second.data.device.name, "Patio Basil");
+  assert.equal(second.data.device.place, "South Balcony");
+  assert.equal(state.users[requesterUid].devices["device-a"].name, "Patio Basil");
+  assert.equal(state.users[requesterUid].devices["device-a"].place, "South Balcony");
 });
