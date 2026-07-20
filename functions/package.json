@@ -6,8 +6,9 @@
   },
   "main": "src/index.js",
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "check": "node --check src/index.js && node --check src/pairing-finalization.js"
+    "test": "node --test tests/pairing-finalization.test.mjs",
+    "test:integration": "node --test tests/pairing-transaction.integration.test.mjs",
+    "check": "node --check src/index.js && node --check src/pairing-finalization.js && node --check src/pairing-transaction.js"
   },
   "dependencies": {
     "firebase-admin": "14.1.0",
