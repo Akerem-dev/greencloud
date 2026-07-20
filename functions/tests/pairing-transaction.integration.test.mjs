@@ -38,12 +38,12 @@ function approvedState(overrides = {}) {
       ABC123: {
         code: "ABC123",
         deviceId: "device-a",
-        requesterUid: "user-a",
+        requestedByUid: "user-a",
         status: "approved",
-        requestedAtMs: NOW - 500,
-        pairingExpiresAtMs: NOW + 600_000,
+        createdAtMs: NOW - 500,
+        expiresAtMs: NOW + 600_000,
         decidedAtMs: NOW - 100,
-        decidedBy: "device-auth-a",
+        decidedByUid: "device-auth-a",
       },
     },
     ...overrides,
@@ -106,6 +106,8 @@ test("commits canonical ownership and workspace projection in RTDB", async () =>
   assert.equal(state.pairings.ABC123.ownerUid, "user-a");
   assert.equal(state.pairingClaims.ABC123.status, "finalized");
   assert.equal(state.pairingClaims.ABC123.finalizedBy, "user-a");
+  assert.equal(state.pairingClaims.ABC123.requestedByUid, "user-a");
+  assert.equal(state.pairingClaims.ABC123.decidedByUid, "device-auth-a");
 
   assert.equal(device.id, "device-a");
   assert.equal(device.name, "Patio Basil");
