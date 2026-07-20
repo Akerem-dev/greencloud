@@ -19,6 +19,23 @@ function requireObject(value, code, message) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new PairingFinalizationError(code, message);
   }
+
+  return value;
+}
+
+function requireString(value, code, message) {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new PairingFinalizationError(code, message);
+  }
+
+  return value;
+}
+
+function requirePositiveSafeInteger(value, code, message) {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new PairingFinalizationError(code, message);
+  }
+
   return value;
 }
 
@@ -79,6 +96,7 @@ function optionalRecord(value, code, message) {
   if (value === undefined || value === null) {
     return {};
   }
+
   return requireObject(value, code, message);
 }
 
@@ -364,6 +382,73 @@ function validateWorkspaceContainers(greencloud, requesterUid, deviceId) {
   }
 }
 
+function validateClaimContract(claim, pairing, pairingCode, requesterUid, nowMs) {
+  const requestedByUid = requireString(
+    claim.requestedByUid,
+    "failed-precondition",
+    "Pairing claim requester identity is missing.",
+  );
+
+  if (requestedByUid !== requesterUid) {
+    throw new PairingFinalizationError(
+      "permission-denied",
+      "The requester does not own this pairing claim.",
+    );
+  }
+  if (claim.code !== pairingCode || pairing.code !== pairingCode) {
+    throw new PairingFinalizationError(
+      "failed-precondition",
+      "Pairing code records do not match.",
+    );
+  }
+
+  const deviceId = requireString(
+    claim.deviceId,
+    "failed-precondition",
+    "Pairing claim device identity is missing.",
+  );
+  if (deviceId !== pairing.deviceId) {
+    throw new PairingFinalizationError(
+      "failed-precondition",
+      "Pairing claim device does not match the pairing record.",
+    );
+  }
+
+  const claimCreatedAtMs = requirePositiveSafeInteger(
+    claim.createdAtMs,
+    "failed-precondition",
+    "Pairing claim creation timestamp is invalid.",
+  );
+  const claimExpiresAtMs = requirePositiveSafeInteger(
+    claim.expiresAtMs,
+    "failed-precondition",
+    "Pairing claim expiry timestamp is invalid.",
+  );
+  const pairingExpiresAtMs = requirePositiveSafeInteger(
+    pairing.expiresAtMs,
+    "failed-precondition",
+    "Pairing expiry timestamp is invalid.",
+  );
+
+  if (claimCreatedAtMs > nowMs) {
+    throw new PairingFinalizationError(
+      "failed-precondition",
+      "Pairing claim creation timestamp is in the future.",
+    );
+  }
+  if (claimExpiresAtMs !== pairingExpiresAtMs) {
+    throw new PairingFinalizationError(
+      "failed-precondition",
+      "Pairing expiry records do not match.",
+    );
+  }
+
+  return {
+    deviceId,
+    claimExpiresAtMs,
+  };
+}
+
 function finalizePairingState(currentState, input) {
   const greencloud = requireObject(
     currentState ?? {},
@@ -392,12 +477,11 @@ function finalizePairingState(currentState, input) {
       "An authenticated requester is required.",
     );
   }
-  if (!Number.isSafeInteger(nowMs) || nowMs <= 0) {
-    throw new PairingFinalizationError(
-      "invalid-argument",
-      "nowMs must be a positive safe integer.",
-    );
-  }
+  requirePositiveSafeInteger(
+    nowMs,
+    "invalid-argument",
+    "nowMs must be a positive safe integer.",
+  );
 
   const claims = requireObject(
     greencloud.pairingClaims ?? {},
@@ -430,40 +514,13 @@ function finalizePairingState(currentState, input) {
     "not-found",
     "Pairing code was not found.",
   );
-
-  if (claim.requesterUid !== requesterUid) {
-    throw new PairingFinalizationError(
-      "permission-denied",
-      "The requester does not own this pairing claim.",
-    );
-  }
-  if (claim.code !== pairingCode || pairing.code !== pairingCode) {
-    throw new PairingFinalizationError(
-      "failed-precondition",
-      "Pairing code records do not match.",
-    );
-  }
-  if (
-    typeof claim.deviceId !== "string" ||
-    claim.deviceId.length === 0 ||
-    claim.deviceId !== pairing.deviceId
-  ) {
-    throw new PairingFinalizationError(
-      "failed-precondition",
-      "Pairing claim device does not match the pairing record.",
-    );
-  }
-  if (
-    claim.pairingExpiresAtMs !== pairing.expiresAtMs ||
-    !Number.isSafeInteger(pairing.expiresAtMs)
-  ) {
-    throw new PairingFinalizationError(
-      "failed-precondition",
-      "Pairing expiry records do not match.",
-    );
-  }
-
-  const deviceId = claim.deviceId;
+  const { deviceId, claimExpiresAtMs } = validateClaimContract(
+    claim,
+    pairing,
+    pairingCode,
+    requesterUid,
+    nowMs,
+  );
   const existingOwner = owners[deviceId];
   const isAlreadyFinalized =
     claim.status === "finalized" &&
@@ -475,12 +532,11 @@ function finalizePairingState(currentState, input) {
   validateWorkspaceContainers(greencloud, requesterUid, deviceId);
 
   if (isAlreadyFinalized) {
-    if (!Number.isSafeInteger(claim.finalizedAtMs)) {
-      throw new PairingFinalizationError(
-        "failed-precondition",
-        "Finalized pairing timestamp is missing.",
-      );
-    }
+    requirePositiveSafeInteger(
+      claim.finalizedAtMs,
+      "failed-precondition",
+      "Finalized pairing timestamp is missing.",
+    );
 
     if (
       workspaceProjectionIsComplete(
@@ -544,17 +600,30 @@ function finalizePairingState(currentState, input) {
       "Pairing code is no longer available.",
     );
   }
-  if (pairing.expiresAtMs <= nowMs || claim.pairingExpiresAtMs <= nowMs) {
+  if (pairing.expiresAtMs <= nowMs || claimExpiresAtMs <= nowMs) {
     throw new PairingFinalizationError(
       "deadline-exceeded",
       "Pairing code has expired.",
     );
   }
-  if (
-    typeof pairing.deviceAuthUid !== "string" ||
-    pairing.deviceAuthUid.length === 0 ||
-    claim.decidedBy !== pairing.deviceAuthUid
-  ) {
+
+  const deviceAuthUid = requireString(
+    pairing.deviceAuthUid,
+    "failed-precondition",
+    "Pairing device identity is missing.",
+  );
+  const decidedByUid = requireString(
+    claim.decidedByUid,
+    "failed-precondition",
+    "Pairing approval identity is missing.",
+  );
+  const decidedAtMs = requirePositiveSafeInteger(
+    claim.decidedAtMs,
+    "failed-precondition",
+    "Pairing decision timestamp is invalid.",
+  );
+
+  if (decidedAtMs > nowMs || decidedByUid !== deviceAuthUid) {
     throw new PairingFinalizationError(
       "failed-precondition",
       "Pairing approval identity does not match the device.",
@@ -566,7 +635,7 @@ function finalizePairingState(currentState, input) {
     "failed-precondition",
     "Canonical device actor is missing.",
   );
-  if (actor.deviceAuthUid !== pairing.deviceAuthUid) {
+  if (actor.deviceAuthUid !== deviceAuthUid) {
     throw new PairingFinalizationError(
       "failed-precondition",
       "Canonical device actor does not match the pairing record.",
