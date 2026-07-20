@@ -39,6 +39,8 @@ exports.finalizePairing = onCall(
         pairingCode,
         requesterUid: request.auth.uid,
         nowMs: Date.now(),
+        deviceName: request.data?.name,
+        devicePlace: request.data?.place,
       });
     } catch (error) {
       if (error instanceof HttpsError) {
