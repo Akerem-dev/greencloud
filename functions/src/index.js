@@ -5,9 +5,9 @@ const { getDatabase } = require("firebase-admin/database");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const {
   PairingFinalizationError,
-  finalizePairingState,
   normalizePairingCode,
 } = require("./pairing-finalization");
+const { finalizePairingTransaction } = require("./pairing-transaction");
 
 if (getApps().length === 0) {
   initializeApp();
@@ -34,32 +34,12 @@ exports.finalizePairing = onCall(
       throw error;
     }
 
-    const rootRef = getDatabase().ref("greencloud");
-    let finalResult;
-
     try {
-      const transaction = await rootRef.transaction(
-        (currentState) => {
-          const transition = finalizePairingState(currentState, {
-            pairingCode,
-            requesterUid: request.auth.uid,
-            nowMs: Date.now(),
-          });
-          finalResult = transition.result;
-          return transition.state;
-        },
-        undefined,
-        false,
-      );
-
-      if (!transaction.committed || !finalResult) {
-        throw new HttpsError(
-          "aborted",
-          "Pairing finalization was not committed.",
-        );
-      }
-
-      return finalResult;
+      return await finalizePairingTransaction(getDatabase().ref("greencloud"), {
+        pairingCode,
+        requesterUid: request.auth.uid,
+        nowMs: Date.now(),
+      });
     } catch (error) {
       if (error instanceof HttpsError) {
         throw error;
