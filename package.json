@@ -10,6 +10,7 @@
     "test:firebase-rules": "firebase emulators:exec --only database --project demo-greencloud \"node --test --test-concurrency=1 tests/firebase/database.rules.test.mjs tests/firebase/pairing.rules.test.mjs tests/firebase/pairing-claim.rules.test.mjs\"",
     "test:functions": "npm --prefix functions test",
     "test:functions-integration": "firebase emulators:exec --only database --project demo-greencloud \"npm --prefix functions run test:integration\"",
+    "test:functions-callable": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"node --test --test-concurrency=1 tests/firebase/functions-callable.integration.test.mjs\"",
     "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration"
   },
   "dependencies": {
