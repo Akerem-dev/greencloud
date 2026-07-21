@@ -1,12 +1,7 @@
 import type { ReactNode } from "react";
 
-import ProtectedPairingStudio from "@/components/devices/protected-pairing-studio";
+import DevicesPairingExperience from "@/components/devices/devices-pairing-experience";
 
 export default function DevicesLayout({ children }: { children: ReactNode }) {
-  return (
-    <>
-      {children}
-      <ProtectedPairingStudio />
-    </>
-  );
+  return <DevicesPairingExperience>{children}</DevicesPairingExperience>;
 }
