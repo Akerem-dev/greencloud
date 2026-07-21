@@ -133,7 +133,7 @@ before(() => {
     {
       apiKey: "demo-api-key",
       authDomain: `${PROJECT_ID}.firebaseapp.com`,
-      databaseURL: `https://${PROJECT_ID}-default-rtdb.firebaseio.com`,
+      databaseURL: DATABASE_URL,
       projectId: PROJECT_ID,
     },
     CLIENT_APP_NAME,
