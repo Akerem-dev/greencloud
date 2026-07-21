@@ -6,6 +6,7 @@ import {
 } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getDatabase } from "firebase/database";
+import { getFunctions } from "firebase/functions";
 
 function requirePublicEnv(name: string, value: string | undefined) {
   const normalizedValue = value?.trim();
@@ -55,5 +56,6 @@ export const firebaseApp =
 
 export const firebaseAuth = getAuth(firebaseApp);
 export const realtimeDatabase = getDatabase(firebaseApp);
+export const firebaseFunctions = getFunctions(firebaseApp, "europe-west1");
 
 export const GREENCLOUD_ROOT = "greencloud";
