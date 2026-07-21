@@ -470,18 +470,23 @@ function PairingForm({
       </h3>
 
       <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
-        Enter the 7-character OLED code from the ESP32 display.
+        Enter the 6-character OLED code, then approve the request on the ESP32.
       </p>
 
       <div className="mt-5 grid gap-4">
         <TextField
           label="OLED code"
           value={code}
-          placeholder="A7K9Q2M"
-          maxLength={7}
+          placeholder="ABC123"
+          maxLength={6}
           autoFocus={!compact}
           onChange={(value) =>
-            setCode(value.replace(/[^A-Za-z0-9]/g, "").slice(0, 7))
+            setCode(
+              value
+                .replace(/[^A-Za-z0-9]/g, "")
+                .slice(0, 6)
+                .toUpperCase(),
+            )
           }
         />
 
@@ -521,7 +526,7 @@ function PairingForm({
         className="premium-btn mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[20px] px-6 py-4 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-60"
       >
         <KeyRound className="h-[18px] w-[18px]" />
-        {isPairing ? "Pairing..." : "Pair device"}
+        {isPairing ? "Waiting for ESP32..." : "Pair device"}
       </button>
 
       {!compact ? (
@@ -535,6 +540,7 @@ function PairingForm({
               "Power on ESP32",
               "Read OLED code",
               "Enter code here",
+              "Approve request on ESP32",
               "Monitor telemetry",
             ].map((item, index) => (
               <div
@@ -704,7 +710,9 @@ function PairingModal({
       <button
         type="button"
         className="absolute inset-0"
-        onClick={onClose}
+        onClick={() => {
+          if (!isPairing) onClose();
+        }}
         aria-label="Close pairing modal"
       />
 
@@ -722,7 +730,8 @@ function PairingModal({
             <button
               type="button"
               onClick={onClose}
-              className="premium-btn-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+              disabled={isPairing}
+              className="premium-btn-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -1191,17 +1200,20 @@ export default function DevicesPage() {
   const newestLabel = devices[0]?.name ?? "No device";
 
   const handlePairDevice = async () => {
-    const cleanCode = pairCode.trim();
+    const cleanCode = pairCode
+      .trim()
+      .replace(/\s+/g, "")
+      .toUpperCase();
 
-    if (cleanCode.length !== 7) {
-      setError("Enter the 7-character OLED code.");
+    if (cleanCode.length !== 6) {
+      setError("Enter the 6-character OLED code.");
       setFeedback("");
       return;
     }
 
     setIsPairing(true);
     setError("");
-    setFeedback("");
+    setFeedback("Pairing request sent. Approve it on the ESP32.");
 
     try {
       const paired = await pairDeviceByCode(
@@ -1222,6 +1234,7 @@ export default function DevicesPage() {
       setPairingModalOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pairing failed.");
+      setFeedback("");
     } finally {
       setIsPairing(false);
     }
@@ -1421,9 +1434,9 @@ export default function DevicesPage() {
                 </h3>
 
                 <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--gc-soft)] sm:text-base">
-                  Power on the ESP32, read the OLED code on the display, and
-                  enter it above. After pairing, this area becomes a live device
-                  command center.
+                  Power on the ESP32, enter the 6-character OLED code above,
+                  then approve the request on the device. After pairing, this
+                  area becomes a live device command center.
                 </p>
               </div>
 
@@ -1435,7 +1448,7 @@ export default function DevicesPage() {
                 </p>
 
                 <p className="mt-3 text-xl font-semibold tracking-[-0.04em] text-[var(--gc-text)]">
-                  Waiting for OLED code
+                  Waiting for 6-character OLED code
                 </p>
               </div>
             </div>
