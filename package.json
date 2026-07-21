@@ -14,7 +14,8 @@
     "test:pairing-adapter": "node --test tests/firebase/pairing-device-adapter.test.mjs",
     "test:pairing-ui": "node --test tests/firebase/pairing-ui-contract.test.mjs",
     "test:pairing-progress": "node --test tests/firebase/pairing-progress-ui-contract.test.mjs",
-    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress"
+    "test:pairing-single-entry": "node --test tests/firebase/pairing-single-entry-ui-contract.test.mjs",
+    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry"
   },
   "dependencies": {
     "firebase": "12.16.0",
