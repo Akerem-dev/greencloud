@@ -16,7 +16,8 @@
     "test:pairing-progress": "node --test tests/firebase/pairing-progress-ui-contract.test.mjs",
     "test:pairing-single-entry": "node --test tests/firebase/pairing-single-entry-ui-contract.test.mjs",
     "test:dashboard-operations": "node --test tests/dashboard/live-operations-ui-contract.test.mjs",
-    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations"
+    "test:dashboard-pulse": "node --test tests/dashboard/workspace-pulse-ui-contract.test.mjs",
+    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse"
   },
   "dependencies": {
     "firebase": "12.16.0",
