@@ -15,8 +15,10 @@ import {
 import {
   AppStateProvider as BaseAppStateProvider,
   useAppState as useBaseAppState,
+  type ActivityItem,
   type AppStateContextValue,
   type Device,
+  type NotificationItem,
 } from "@/components/providers/app-state-provider-base";
 
 export type {
@@ -42,6 +44,44 @@ export type {
   ThemePreset,
   WaterLevelStatus,
 } from "@/components/providers/app-state-provider-base";
+
+function normalizeProtectedPairingCopy(value: string) {
+  return value.replaceAll("7-character", "six-character");
+}
+
+function normalizeActivityPairingCopy(item: ActivityItem): ActivityItem {
+  const description = normalizeProtectedPairingCopy(item.description);
+  const body = item.body
+    ? normalizeProtectedPairingCopy(item.body)
+    : item.body;
+
+  if (description === item.description && body === item.body) {
+    return item;
+  }
+
+  return {
+    ...item,
+    description,
+    body,
+  };
+}
+
+function normalizeNotificationPairingCopy(
+  item: NotificationItem,
+): NotificationItem {
+  const body = normalizeProtectedPairingCopy(item.body);
+  const description = normalizeProtectedPairingCopy(item.description);
+
+  if (body === item.body && description === item.description) {
+    return item;
+  }
+
+  return {
+    ...item,
+    body,
+    description,
+  };
+}
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   return <BaseAppStateProvider>{children}</BaseAppStateProvider>;
@@ -83,6 +123,9 @@ export function useAppState(): AppStateContextValue {
   return useMemo(
     () => ({
       ...base,
+      activityFeed: base.activityFeed.map(normalizeActivityPairingCopy),
+      filteredActivity: base.filteredActivity.map(normalizeActivityPairingCopy),
+      notifications: base.notifications.map(normalizeNotificationPairingCopy),
       pairDeviceByCode,
     }),
     [base, pairDeviceByCode],
