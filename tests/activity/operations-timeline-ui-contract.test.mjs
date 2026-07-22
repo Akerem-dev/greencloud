@@ -7,6 +7,10 @@ const deckSource = fs.readFileSync(
   "components/activity/operations-timeline-deck.tsx",
   "utf8",
 );
+const appStateAdapterSource = fs.readFileSync(
+  "components/providers/app-state-provider.tsx",
+  "utf8",
+);
 
 test("mounts the operations timeline deck on the Activity route", () => {
   assert.match(layoutSource, /OperationsTimelineDeck/);
@@ -29,4 +33,23 @@ test("keeps activity operations inside the existing app state boundary", () => {
   assert.match(deckSource, /disabled=\{!hasRealDevice\}/);
   assert.doesNotMatch(deckSource, /from ["']firebase/);
   assert.doesNotMatch(deckSource, /realtimeDatabase|firebaseFunctions|firebaseAuth/);
+});
+
+test("normalizes legacy activity copy to the six-character pairing contract", () => {
+  assert.match(
+    appStateAdapterSource,
+    /replaceAll\("7-character", "six-character"\)/,
+  );
+  assert.match(
+    appStateAdapterSource,
+    /activityFeed: base\.activityFeed\.map\(normalizeActivityPairingCopy\)/,
+  );
+  assert.match(
+    appStateAdapterSource,
+    /filteredActivity: base\.filteredActivity\.map\(normalizeActivityPairingCopy\)/,
+  );
+  assert.match(
+    appStateAdapterSource,
+    /notifications: base\.notifications\.map\(normalizeNotificationPairingCopy\)/,
+  );
 });
