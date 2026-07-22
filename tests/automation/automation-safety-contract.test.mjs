@@ -23,6 +23,17 @@ const currentAutomation = {
   quietEnd: "07:00",
 };
 
+const safeCommandContext = {
+  authenticated: true,
+  hasRealDevice: true,
+  manualOverrideEnabled: true,
+  telemetryReady: true,
+  deviceStatus: "Online",
+  sensorStatus: "OK",
+  rainStatus: "Clear",
+  waterLevelStatus: "OK",
+};
+
 const providerSource = fs.readFileSync(
   "components/providers/app-state-provider.tsx",
   "utf8",
@@ -64,62 +75,52 @@ test("rejects malformed mode and clock input while synchronizing aliases", () =>
   assert.equal("unknownField" in normalized, false);
 });
 
-test("blocks manual irrigation without a real device or manual override", () => {
+test("blocks unauthenticated and unpaired command attempts", () => {
   assert.equal(
     getManualIrrigationDecision({
-      hasRealDevice: false,
-      manualOverrideEnabled: true,
-      telemetryReady: true,
-      deviceStatus: "Online",
-      sensorStatus: "OK",
-      rainStatus: "Clear",
-      waterLevelStatus: "OK",
-    }).allowed,
-    false,
+      ...safeCommandContext,
+      authenticated: false,
+    }).reason,
+    "Sign in before sending device commands.",
   );
 
   assert.equal(
     getManualIrrigationDecision({
-      hasRealDevice: true,
+      ...safeCommandContext,
+      hasRealDevice: false,
+    }).allowed,
+    false,
+  );
+});
+
+test("blocks manual irrigation when manual override is disabled", () => {
+  assert.equal(
+    getManualIrrigationDecision({
+      ...safeCommandContext,
       manualOverrideEnabled: false,
-      telemetryReady: true,
-      deviceStatus: "Online",
-      sensorStatus: "OK",
-      rainStatus: "Clear",
-      waterLevelStatus: "OK",
     }).reason,
     "Manual override is disabled.",
   );
 });
 
 test("blocks irrigation for unreliable telemetry, rain and tank protection", () => {
-  const common = {
-    hasRealDevice: true,
-    manualOverrideEnabled: true,
-    telemetryReady: true,
-    deviceStatus: "Online",
-    sensorStatus: "OK",
-    rainStatus: "Clear",
-    waterLevelStatus: "OK",
-  };
-
   assert.equal(
     getManualIrrigationDecision({
-      ...common,
+      ...safeCommandContext,
       telemetryReady: false,
     }).allowed,
     false,
   );
   assert.equal(
     getManualIrrigationDecision({
-      ...common,
+      ...safeCommandContext,
       rainStatus: "Detected",
     }).allowed,
     false,
   );
   assert.equal(
     getManualIrrigationDecision({
-      ...common,
+      ...safeCommandContext,
       waterLevelStatus: "Low",
     }).allowed,
     false,
@@ -127,15 +128,7 @@ test("blocks irrigation for unreliable telemetry, rain and tank protection", () 
 });
 
 test("allows a manual command only after all web-side guards pass", () => {
-  const decision = getManualIrrigationDecision({
-    hasRealDevice: true,
-    manualOverrideEnabled: true,
-    telemetryReady: true,
-    deviceStatus: "Online",
-    sensorStatus: "OK",
-    rainStatus: "Clear",
-    waterLevelStatus: "OK",
-  });
+  const decision = getManualIrrigationDecision(safeCommandContext);
 
   assert.deepEqual(decision, {
     allowed: true,
@@ -146,6 +139,7 @@ test("allows a manual command only after all web-side guards pass", () => {
 test("routes automation updates and commands through the adapter boundary", () => {
   assert.match(providerSource, /normalizeAutomationPatch/);
   assert.match(providerSource, /getManualIrrigationDecision/);
+  assert.match(providerSource, /authenticated: Boolean\(firebaseAuth\.currentUser\)/);
   assert.match(providerSource, /base\.updateAutomation\(normalized\)/);
   assert.match(providerSource, /base\.startIrrigation\(commandTarget\.id\)/);
   assert.match(providerSource, /if \(!decision\.allowed\)/);
