@@ -7,6 +7,11 @@ import {
   firebaseFunctions,
   realtimeDatabase,
 } from "@/lib/firebase";
+import {
+  AUTOMATION_COMMAND_BLOCKED_EVENT,
+  getManualIrrigationDecision,
+  normalizeAutomationPatch,
+} from "@/lib/automation-safety.mjs";
 import { pairedResultToDevice } from "@/lib/firebase-pairing-device.mjs";
 import {
   PairingFlowError,
@@ -17,6 +22,7 @@ import {
   useAppState as useBaseAppState,
   type ActivityItem,
   type AppStateContextValue,
+  type AutomationState,
   type Device,
   type NotificationItem,
 } from "@/components/providers/app-state-provider-base";
@@ -83,12 +89,35 @@ function normalizeNotificationPairingCopy(
   };
 }
 
+function hasAutomationTelemetry(device: Device) {
+  return (
+    device.status === "Online" ||
+    typeof device.lastSeenMs === "number" ||
+    device.signal > 0
+  );
+}
+
+function emitBlockedAutomationCommand(reason: string) {
+  window.dispatchEvent(
+    new CustomEvent(AUTOMATION_COMMAND_BLOCKED_EVENT, {
+      detail: { reason },
+    }),
+  );
+}
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   return <BaseAppStateProvider>{children}</BaseAppStateProvider>;
 }
 
 export function useAppState(): AppStateContextValue {
   const base = useBaseAppState();
+  const {
+    automation,
+    devices,
+    selectedDevice,
+    startIrrigation: startBaseIrrigation,
+    updateAutomation: updateBaseAutomation,
+  } = base;
 
   const pairDeviceByCode = useCallback(
     async (code: string, name?: string, place?: string) => {
@@ -120,6 +149,59 @@ export function useAppState(): AppStateContextValue {
     [],
   );
 
+  const updateAutomation = useCallback(
+    (
+      keyOrPatch: keyof AutomationState | Partial<AutomationState>,
+      value?: AutomationState[keyof AutomationState],
+    ) => {
+      const patch =
+        typeof keyOrPatch === "string"
+          ? ({ [keyOrPatch]: value } as Partial<AutomationState>)
+          : keyOrPatch;
+
+      const normalized = normalizeAutomationPatch(
+        automation,
+        patch,
+      ) as AutomationState;
+
+      updateBaseAutomation(normalized);
+    },
+    [automation, updateBaseAutomation],
+  ) as AppStateContextValue["updateAutomation"];
+
+  const startIrrigation = useCallback(
+    (deviceId?: string) => {
+      const targetId = deviceId ?? selectedDevice.id;
+      const target = devices.find((device) => device.id === targetId);
+      const hasRealDevice = Boolean(target && target.id !== "device-waiting");
+      const commandTarget = target ?? selectedDevice;
+
+      const decision = getManualIrrigationDecision({
+        authenticated: Boolean(firebaseAuth.currentUser),
+        hasRealDevice,
+        manualOverrideEnabled: automation.manualOverrideEnabled,
+        telemetryReady: hasAutomationTelemetry(commandTarget),
+        deviceStatus: commandTarget.status,
+        sensorStatus: commandTarget.sensorStatus,
+        rainStatus: commandTarget.rainStatus,
+        waterLevelStatus: commandTarget.waterLevelStatus,
+      });
+
+      if (!decision.allowed) {
+        emitBlockedAutomationCommand(decision.reason);
+        return;
+      }
+
+      startBaseIrrigation(commandTarget.id);
+    },
+    [
+      automation.manualOverrideEnabled,
+      devices,
+      selectedDevice,
+      startBaseIrrigation,
+    ],
+  );
+
   return useMemo(
     () => ({
       ...base,
@@ -127,7 +209,9 @@ export function useAppState(): AppStateContextValue {
       filteredActivity: base.filteredActivity.map(normalizeActivityPairingCopy),
       notifications: base.notifications.map(normalizeNotificationPairingCopy),
       pairDeviceByCode,
+      updateAutomation,
+      startIrrigation,
     }),
-    [base, pairDeviceByCode],
+    [base, pairDeviceByCode, startIrrigation, updateAutomation],
   );
 }
