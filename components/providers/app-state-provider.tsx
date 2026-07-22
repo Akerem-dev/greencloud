@@ -170,6 +170,7 @@ export function useAppState(): AppStateContextValue {
       const commandTarget = target ?? base.selectedDevice;
 
       const decision = getManualIrrigationDecision({
+        authenticated: Boolean(firebaseAuth.currentUser),
         hasRealDevice,
         manualOverrideEnabled: base.automation.manualOverrideEnabled,
         telemetryReady: hasAutomationTelemetry(commandTarget),
