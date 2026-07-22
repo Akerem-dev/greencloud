@@ -18,7 +18,8 @@
     "test:dashboard-operations": "node --test tests/dashboard/live-operations-ui-contract.test.mjs",
     "test:dashboard-pulse": "node --test tests/dashboard/workspace-pulse-ui-contract.test.mjs",
     "test:activity-operations": "node --test tests/activity/operations-timeline-ui-contract.test.mjs",
-    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse && npm run test:activity-operations"
+    "test:automation-safety": "node --test tests/automation/automation-safety-contract.test.mjs",
+    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse && npm run test:activity-operations && npm run test:automation-safety"
   },
   "dependencies": {
     "firebase": "12.16.0",
