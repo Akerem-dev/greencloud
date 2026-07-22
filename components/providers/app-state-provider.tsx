@@ -111,6 +111,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
 export function useAppState(): AppStateContextValue {
   const base = useBaseAppState();
+  const {
+    automation,
+    devices,
+    selectedDevice,
+    startIrrigation: startBaseIrrigation,
+    updateAutomation: updateBaseAutomation,
+  } = base;
 
   const pairDeviceByCode = useCallback(
     async (code: string, name?: string, place?: string) => {
@@ -153,26 +160,26 @@ export function useAppState(): AppStateContextValue {
           : keyOrPatch;
 
       const normalized = normalizeAutomationPatch(
-        base.automation,
+        automation,
         patch,
       ) as AutomationState;
 
-      base.updateAutomation(normalized);
+      updateBaseAutomation(normalized);
     },
-    [base.automation, base.updateAutomation],
+    [automation, updateBaseAutomation],
   ) as AppStateContextValue["updateAutomation"];
 
   const startIrrigation = useCallback(
     (deviceId?: string) => {
-      const targetId = deviceId ?? base.selectedDevice.id;
-      const target = base.devices.find((device) => device.id === targetId);
+      const targetId = deviceId ?? selectedDevice.id;
+      const target = devices.find((device) => device.id === targetId);
       const hasRealDevice = Boolean(target && target.id !== "device-waiting");
-      const commandTarget = target ?? base.selectedDevice;
+      const commandTarget = target ?? selectedDevice;
 
       const decision = getManualIrrigationDecision({
         authenticated: Boolean(firebaseAuth.currentUser),
         hasRealDevice,
-        manualOverrideEnabled: base.automation.manualOverrideEnabled,
+        manualOverrideEnabled: automation.manualOverrideEnabled,
         telemetryReady: hasAutomationTelemetry(commandTarget),
         deviceStatus: commandTarget.status,
         sensorStatus: commandTarget.sensorStatus,
@@ -185,13 +192,13 @@ export function useAppState(): AppStateContextValue {
         return;
       }
 
-      base.startIrrigation(commandTarget.id);
+      startBaseIrrigation(commandTarget.id);
     },
     [
-      base.automation.manualOverrideEnabled,
-      base.devices,
-      base.selectedDevice,
-      base.startIrrigation,
+      automation.manualOverrideEnabled,
+      devices,
+      selectedDevice,
+      startBaseIrrigation,
     ],
   );
 
