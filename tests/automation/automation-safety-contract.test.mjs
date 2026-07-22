@@ -140,9 +140,11 @@ test("routes automation updates and commands through the adapter boundary", () =
   assert.match(providerSource, /normalizeAutomationPatch/);
   assert.match(providerSource, /getManualIrrigationDecision/);
   assert.match(providerSource, /authenticated: Boolean\(firebaseAuth\.currentUser\)/);
-  assert.match(providerSource, /base\.updateAutomation\(normalized\)/);
-  assert.match(providerSource, /base\.startIrrigation\(commandTarget\.id\)/);
+  assert.match(providerSource, /updateBaseAutomation\(normalized\)/);
+  assert.match(providerSource, /startBaseIrrigation\(commandTarget\.id\)/);
   assert.match(providerSource, /if \(!decision\.allowed\)/);
+  assert.match(providerSource, /\[automation, updateBaseAutomation\]/);
+  assert.match(providerSource, /startBaseIrrigation,/);
 });
 
 test("mounts a visible blocked-command notice on the Automation route", () => {
