@@ -1,21 +1,15 @@
 "use strict";
 
 const { getApps, initializeApp } = require("firebase-admin/app");
-const { getDatabase } = require("firebase-admin/database");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
-const {
-  PairingFinalizationError,
-  normalizePairingCode,
-} = require("./pairing-finalization");
-const { finalizePairingTransaction } = require("./pairing-transaction");
-const {
-  DeviceUnpairError,
-  normalizeDeviceId,
-} = require("./device-unpair");
-const { unpairDeviceTransaction } = require("./device-unpair-transaction");
 
 if (getApps().length === 0) {
   initializeApp();
+}
+
+function greenCloudRoot() {
+  const { getDatabase } = require("firebase-admin/database");
+  return getDatabase().ref("greencloud");
 }
 
 exports.finalizePairing = onCall(
@@ -29,6 +23,12 @@ exports.finalizePairing = onCall(
       throw new HttpsError("unauthenticated", "Authentication is required.");
     }
 
+    const {
+      PairingFinalizationError,
+      normalizePairingCode,
+    } = require("./pairing-finalization");
+    const { finalizePairingTransaction } = require("./pairing-transaction");
+
     let pairingCode;
     try {
       pairingCode = normalizePairingCode(request.data?.pairingCode);
@@ -40,7 +40,7 @@ exports.finalizePairing = onCall(
     }
 
     try {
-      return await finalizePairingTransaction(getDatabase().ref("greencloud"), {
+      return await finalizePairingTransaction(greenCloudRoot(), {
         pairingCode,
         requesterUid: request.auth.uid,
         nowMs: Date.now(),
@@ -70,6 +70,12 @@ exports.unpairDevice = onCall(
       throw new HttpsError("unauthenticated", "Authentication is required.");
     }
 
+    const {
+      DeviceUnpairError,
+      normalizeDeviceId,
+    } = require("./device-unpair");
+    const { unpairDeviceTransaction } = require("./device-unpair-transaction");
+
     let deviceId;
     try {
       deviceId = normalizeDeviceId(request.data?.deviceId);
@@ -81,7 +87,7 @@ exports.unpairDevice = onCall(
     }
 
     try {
-      return await unpairDeviceTransaction(getDatabase().ref("greencloud"), {
+      return await unpairDeviceTransaction(greenCloudRoot(), {
         deviceId,
         requesterUid: request.auth.uid,
         nowMs: Date.now(),
