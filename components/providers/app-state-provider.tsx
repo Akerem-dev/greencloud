@@ -13,6 +13,7 @@ import {
   normalizeAutomationPatch,
 } from "@/lib/automation-safety.mjs";
 import {
+  DEVICE_MUTATION_BLOCKED_EVENT,
   assertDeviceMutationTarget,
   assertTrustedDeviceRemovalAvailable,
   normalizeDeviceIdentityPatch,
@@ -117,6 +118,20 @@ function emitBlockedAutomationCommand(reason: string) {
   );
 }
 
+function emitBlockedDeviceMutation(reason: string) {
+  window.dispatchEvent(
+    new CustomEvent(DEVICE_MUTATION_BLOCKED_EVENT, {
+      detail: { reason },
+    }),
+  );
+}
+
+function mutationErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "The device change was blocked safely.";
+}
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   return <BaseAppStateProvider>{children}</BaseAppStateProvider>;
 }
@@ -176,15 +191,20 @@ export function useAppState(): AppStateContextValue {
   const selectDevice = useCallback(
     (deviceId: string) => {
       const user = firebaseAuth.currentUser;
-      const target = assertDeviceMutationTarget({
-        authenticated: Boolean(user),
-        userId: user?.uid,
-        devices,
-        deviceId,
-        requireAuthentication: false,
-      }) as Device;
 
-      selectBaseDevice(target.id);
+      try {
+        const target = assertDeviceMutationTarget({
+          authenticated: Boolean(user),
+          userId: user?.uid,
+          devices,
+          deviceId,
+          requireAuthentication: false,
+        }) as Device;
+
+        selectBaseDevice(target.id);
+      } catch (error) {
+        emitBlockedDeviceMutation(mutationErrorMessage(error));
+      }
     },
     [devices, selectBaseDevice],
   );
@@ -192,21 +212,26 @@ export function useAppState(): AppStateContextValue {
   const updateDevice = useCallback(
     (deviceId: string, patch: Partial<Device>) => {
       const user = firebaseAuth.currentUser;
-      const target = assertDeviceMutationTarget({
-        authenticated: Boolean(user),
-        userId: user?.uid,
-        devices,
-        deviceId,
-      }) as Device;
 
-      const normalized = normalizeDeviceIdentityPatch(
-        target,
-        patch,
-      ) as Partial<Device>;
+      try {
+        const target = assertDeviceMutationTarget({
+          authenticated: Boolean(user),
+          userId: user?.uid,
+          devices,
+          deviceId,
+        }) as Device;
 
-      if (Object.keys(normalized).length === 0) return;
+        const normalized = normalizeDeviceIdentityPatch(
+          target,
+          patch,
+        ) as Partial<Device>;
 
-      updateBaseDevice(target.id, normalized);
+        if (Object.keys(normalized).length === 0) return;
+
+        updateBaseDevice(target.id, normalized);
+      } catch (error) {
+        emitBlockedDeviceMutation(mutationErrorMessage(error));
+      }
     },
     [devices, updateBaseDevice],
   );
@@ -215,12 +240,16 @@ export function useAppState(): AppStateContextValue {
     (deviceId: string) => {
       const user = firebaseAuth.currentUser;
 
-      assertTrustedDeviceRemovalAvailable({
-        authenticated: Boolean(user),
-        userId: user?.uid,
-        devices,
-        deviceId,
-      });
+      try {
+        assertTrustedDeviceRemovalAvailable({
+          authenticated: Boolean(user),
+          userId: user?.uid,
+          devices,
+          deviceId,
+        });
+      } catch (error) {
+        emitBlockedDeviceMutation(mutationErrorMessage(error));
+      }
     },
     [devices],
   );
