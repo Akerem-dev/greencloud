@@ -8,6 +8,11 @@ const {
   normalizePairingCode,
 } = require("./pairing-finalization");
 const { finalizePairingTransaction } = require("./pairing-transaction");
+const {
+  DeviceUnpairError,
+  normalizeDeviceId,
+} = require("./device-unpair");
+const { unpairDeviceTransaction } = require("./device-unpair-transaction");
 
 if (getApps().length === 0) {
   initializeApp();
@@ -50,6 +55,45 @@ exports.finalizePairing = onCall(
         throw new HttpsError(error.code, error.message);
       }
       throw new HttpsError("internal", "Pairing finalization failed.");
+    }
+  },
+);
+
+exports.unpairDevice = onCall(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+  },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "Authentication is required.");
+    }
+
+    let deviceId;
+    try {
+      deviceId = normalizeDeviceId(request.data?.deviceId);
+    } catch (error) {
+      if (error instanceof DeviceUnpairError) {
+        throw new HttpsError(error.code, error.message);
+      }
+      throw error;
+    }
+
+    try {
+      return await unpairDeviceTransaction(getDatabase().ref("greencloud"), {
+        deviceId,
+        requesterUid: request.auth.uid,
+        nowMs: Date.now(),
+      });
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      if (error instanceof DeviceUnpairError) {
+        throw new HttpsError(error.code, error.message);
+      }
+      throw new HttpsError("internal", "Device unpair failed.");
     }
   },
 );
