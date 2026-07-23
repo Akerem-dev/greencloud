@@ -18,6 +18,11 @@ import {
   pairDeviceWithProtectedClaim,
 } from "@/lib/firebase-pairing-flow.mjs";
 import {
+  normalizeIdentitySettingsPatch,
+  validateProfileName,
+  validateWorkspaceIdentity,
+} from "@/lib/workspace-profile-validation.mjs";
+import {
   AppStateProvider as BaseAppStateProvider,
   useAppState as useBaseAppState,
   type ActivityItem,
@@ -25,6 +30,7 @@ import {
   type AutomationState,
   type Device,
   type NotificationItem,
+  type SettingsState,
 } from "@/components/providers/app-state-provider-base";
 
 export type {
@@ -115,8 +121,12 @@ export function useAppState(): AppStateContextValue {
     automation,
     devices,
     selectedDevice,
+    settings,
+    saveWorkspaceIdentity: saveBaseWorkspaceIdentity,
     startIrrigation: startBaseIrrigation,
     updateAutomation: updateBaseAutomation,
+    updateProfileName: updateBaseProfileName,
+    updateSettings: updateBaseSettings,
   } = base;
 
   const pairDeviceByCode = useCallback(
@@ -169,6 +179,48 @@ export function useAppState(): AppStateContextValue {
     [automation, updateBaseAutomation],
   ) as AppStateContextValue["updateAutomation"];
 
+  const updateSettings = useCallback(
+    (patch: Partial<SettingsState>) => {
+      const identityPatch = normalizeIdentitySettingsPatch(
+        settings,
+        patch,
+      ) as Partial<SettingsState>;
+
+      updateBaseSettings({
+        ...patch,
+        ...identityPatch,
+      });
+    },
+    [settings, updateBaseSettings],
+  );
+
+  const updateSetting = useCallback(
+    <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
+      updateSettings({ [key]: value } as Partial<SettingsState>);
+    },
+    [updateSettings],
+  ) as AppStateContextValue["updateSetting"];
+
+  const saveWorkspaceIdentity = useCallback(
+    (payload: Parameters<AppStateContextValue["saveWorkspaceIdentity"]>[0]) => {
+      const normalized = validateWorkspaceIdentity(
+        payload,
+        settings,
+      ) as Parameters<AppStateContextValue["saveWorkspaceIdentity"]>[0];
+
+      saveBaseWorkspaceIdentity(normalized);
+    },
+    [saveBaseWorkspaceIdentity, settings],
+  );
+
+  const updateProfileName = useCallback(
+    async (displayName: string) => {
+      const normalized = validateProfileName(displayName);
+      await updateBaseProfileName(normalized);
+    },
+    [updateBaseProfileName],
+  );
+
   const startIrrigation = useCallback(
     (deviceId?: string) => {
       const targetId = deviceId ?? selectedDevice.id;
@@ -210,8 +262,21 @@ export function useAppState(): AppStateContextValue {
       notifications: base.notifications.map(normalizeNotificationPairingCopy),
       pairDeviceByCode,
       updateAutomation,
+      updateSettings,
+      updateSetting,
+      saveWorkspaceIdentity,
+      updateProfileName,
       startIrrigation,
     }),
-    [base, pairDeviceByCode, startIrrigation, updateAutomation],
+    [
+      base,
+      pairDeviceByCode,
+      saveWorkspaceIdentity,
+      startIrrigation,
+      updateAutomation,
+      updateProfileName,
+      updateSetting,
+      updateSettings,
+    ],
   );
 }
