@@ -115,7 +115,7 @@ function findPairingCode(greencloud, workspace, deviceId, requesterUid) {
   return undefined;
 }
 
-function buildFactoryResetCommand(deviceId, nowMs) {
+function buildFactoryResetCommand(nowMs) {
   return {
     type: "FACTORY_RESET",
     factoryReset: true,
@@ -128,7 +128,6 @@ function buildFactoryResetCommand(deviceId, nowMs) {
     pumpEnabled: false,
     handled: false,
     status: "pending",
-    deviceId,
   };
 }
 
@@ -247,7 +246,7 @@ function unpairDeviceState(currentState, input) {
     requesterUid,
   );
   const unpairedAt = toIsoString(nowMs);
-  const command = buildFactoryResetCommand(deviceId, nowMs);
+  const command = buildFactoryResetCommand(nowMs);
   const nextState = structuredClone(greencloud);
 
   nextState.deviceCommands ??= {};
