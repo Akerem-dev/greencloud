@@ -12,6 +12,13 @@ import {
   getManualIrrigationDecision,
   normalizeAutomationPatch,
 } from "@/lib/automation-safety.mjs";
+import {
+  DEVICE_MUTATION_BLOCKED_EVENT,
+  assertDeviceMutationTarget,
+  assertTrustedDeviceRemovalAvailable,
+  normalizeDeviceIdentityPatch,
+  normalizePairingDeviceIdentity,
+} from "@/lib/device-mutation-safety.mjs";
 import { pairedResultToDevice } from "@/lib/firebase-pairing-device.mjs";
 import {
   PairingFlowError,
@@ -111,6 +118,20 @@ function emitBlockedAutomationCommand(reason: string) {
   );
 }
 
+function emitBlockedDeviceMutation(reason: string) {
+  window.dispatchEvent(
+    new CustomEvent(DEVICE_MUTATION_BLOCKED_EVENT, {
+      detail: { reason },
+    }),
+  );
+}
+
+function mutationErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "The device change was blocked safely.";
+}
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   return <BaseAppStateProvider>{children}</BaseAppStateProvider>;
 }
@@ -123,8 +144,10 @@ export function useAppState(): AppStateContextValue {
     selectedDevice,
     settings,
     saveWorkspaceIdentity: saveBaseWorkspaceIdentity,
+    selectDevice: selectBaseDevice,
     startIrrigation: startBaseIrrigation,
     updateAutomation: updateBaseAutomation,
+    updateDevice: updateBaseDevice,
     updateProfileName: updateBaseProfileName,
     updateSettings: updateBaseSettings,
   } = base;
@@ -137,17 +160,23 @@ export function useAppState(): AppStateContextValue {
         throw new Error("Sign in before pairing a device.");
       }
 
+      const identity = normalizePairingDeviceIdentity(name, place);
+
       try {
         const result = await pairDeviceWithProtectedClaim({
           database: realtimeDatabase,
           functions: firebaseFunctions,
           userId: user.uid,
           code,
-          name,
-          place,
+          name: identity.name,
+          place: identity.place,
         });
 
-        return pairedResultToDevice(result, name, place) as Device;
+        return pairedResultToDevice(
+          result,
+          identity.name,
+          identity.place,
+        ) as Device;
       } catch (error) {
         if (error instanceof PairingFlowError) {
           throw new Error(error.message, { cause: error });
@@ -157,6 +186,72 @@ export function useAppState(): AppStateContextValue {
       }
     },
     [],
+  );
+
+  const selectDevice = useCallback(
+    (deviceId: string) => {
+      const user = firebaseAuth.currentUser;
+
+      try {
+        const target = assertDeviceMutationTarget({
+          authenticated: Boolean(user),
+          userId: user?.uid,
+          devices,
+          deviceId,
+          requireAuthentication: false,
+        }) as Device;
+
+        selectBaseDevice(target.id);
+      } catch (error) {
+        emitBlockedDeviceMutation(mutationErrorMessage(error));
+      }
+    },
+    [devices, selectBaseDevice],
+  );
+
+  const updateDevice = useCallback(
+    (deviceId: string, patch: Partial<Device>) => {
+      const user = firebaseAuth.currentUser;
+
+      try {
+        const target = assertDeviceMutationTarget({
+          authenticated: Boolean(user),
+          userId: user?.uid,
+          devices,
+          deviceId,
+        }) as Device;
+
+        const normalized = normalizeDeviceIdentityPatch(
+          target,
+          patch,
+        ) as Partial<Device>;
+
+        if (Object.keys(normalized).length === 0) return;
+
+        updateBaseDevice(target.id, normalized);
+      } catch (error) {
+        emitBlockedDeviceMutation(mutationErrorMessage(error));
+      }
+    },
+    [devices, updateBaseDevice],
+  );
+
+  const removeDevice = useCallback(
+    (deviceId: string) => {
+      const user = firebaseAuth.currentUser;
+
+      try {
+        assertTrustedDeviceRemovalAvailable({
+          authenticated: Boolean(user),
+          userId: user?.uid,
+          devices,
+          deviceId,
+        });
+      } catch (error) {
+        emitBlockedDeviceMutation(mutationErrorMessage(error));
+      }
+    },
+    [devices],
   );
 
   const updateAutomation = useCallback(
@@ -261,6 +356,9 @@ export function useAppState(): AppStateContextValue {
       filteredActivity: base.filteredActivity.map(normalizeActivityPairingCopy),
       notifications: base.notifications.map(normalizeNotificationPairingCopy),
       pairDeviceByCode,
+      selectDevice,
+      updateDevice,
+      removeDevice,
       updateAutomation,
       updateSettings,
       updateSetting,
@@ -271,9 +369,12 @@ export function useAppState(): AppStateContextValue {
     [
       base,
       pairDeviceByCode,
+      removeDevice,
       saveWorkspaceIdentity,
+      selectDevice,
       startIrrigation,
       updateAutomation,
+      updateDevice,
       updateProfileName,
       updateSetting,
       updateSettings,
