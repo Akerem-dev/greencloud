@@ -12,6 +12,12 @@ import {
   getManualIrrigationDecision,
   normalizeAutomationPatch,
 } from "@/lib/automation-safety.mjs";
+import {
+  assertDeviceMutationTarget,
+  assertTrustedDeviceRemovalAvailable,
+  normalizeDeviceIdentityPatch,
+  normalizePairingDeviceIdentity,
+} from "@/lib/device-mutation-safety.mjs";
 import { pairedResultToDevice } from "@/lib/firebase-pairing-device.mjs";
 import {
   PairingFlowError,
@@ -123,8 +129,10 @@ export function useAppState(): AppStateContextValue {
     selectedDevice,
     settings,
     saveWorkspaceIdentity: saveBaseWorkspaceIdentity,
+    selectDevice: selectBaseDevice,
     startIrrigation: startBaseIrrigation,
     updateAutomation: updateBaseAutomation,
+    updateDevice: updateBaseDevice,
     updateProfileName: updateBaseProfileName,
     updateSettings: updateBaseSettings,
   } = base;
@@ -137,17 +145,23 @@ export function useAppState(): AppStateContextValue {
         throw new Error("Sign in before pairing a device.");
       }
 
+      const identity = normalizePairingDeviceIdentity(name, place);
+
       try {
         const result = await pairDeviceWithProtectedClaim({
           database: realtimeDatabase,
           functions: firebaseFunctions,
           userId: user.uid,
           code,
-          name,
-          place,
+          name: identity.name,
+          place: identity.place,
         });
 
-        return pairedResultToDevice(result, name, place) as Device;
+        return pairedResultToDevice(
+          result,
+          identity.name,
+          identity.place,
+        ) as Device;
       } catch (error) {
         if (error instanceof PairingFlowError) {
           throw new Error(error.message, { cause: error });
@@ -157,6 +171,58 @@ export function useAppState(): AppStateContextValue {
       }
     },
     [],
+  );
+
+  const selectDevice = useCallback(
+    (deviceId: string) => {
+      const user = firebaseAuth.currentUser;
+      const target = assertDeviceMutationTarget({
+        authenticated: Boolean(user),
+        userId: user?.uid,
+        devices,
+        deviceId,
+        requireAuthentication: false,
+      }) as Device;
+
+      selectBaseDevice(target.id);
+    },
+    [devices, selectBaseDevice],
+  );
+
+  const updateDevice = useCallback(
+    (deviceId: string, patch: Partial<Device>) => {
+      const user = firebaseAuth.currentUser;
+      const target = assertDeviceMutationTarget({
+        authenticated: Boolean(user),
+        userId: user?.uid,
+        devices,
+        deviceId,
+      }) as Device;
+
+      const normalized = normalizeDeviceIdentityPatch(
+        target,
+        patch,
+      ) as Partial<Device>;
+
+      if (Object.keys(normalized).length === 0) return;
+
+      updateBaseDevice(target.id, normalized);
+    },
+    [devices, updateBaseDevice],
+  );
+
+  const removeDevice = useCallback(
+    (deviceId: string) => {
+      const user = firebaseAuth.currentUser;
+
+      assertTrustedDeviceRemovalAvailable({
+        authenticated: Boolean(user),
+        userId: user?.uid,
+        devices,
+        deviceId,
+      });
+    },
+    [devices],
   );
 
   const updateAutomation = useCallback(
@@ -261,6 +327,9 @@ export function useAppState(): AppStateContextValue {
       filteredActivity: base.filteredActivity.map(normalizeActivityPairingCopy),
       notifications: base.notifications.map(normalizeNotificationPairingCopy),
       pairDeviceByCode,
+      selectDevice,
+      updateDevice,
+      removeDevice,
       updateAutomation,
       updateSettings,
       updateSetting,
@@ -271,9 +340,12 @@ export function useAppState(): AppStateContextValue {
     [
       base,
       pairDeviceByCode,
+      removeDevice,
       saveWorkspaceIdentity,
+      selectDevice,
       startIrrigation,
       updateAutomation,
+      updateDevice,
       updateProfileName,
       updateSetting,
       updateSettings,
