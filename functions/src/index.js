@@ -8,6 +8,8 @@ if (getApps().length === 0) {
 }
 
 function greenCloudRoot() {
+  // Keep the database package out of Firebase's deployment-time discovery path.
+  // It is loaded only when an authenticated callable reaches its transaction.
   const { getDatabase } = require("firebase-admin/database");
   return getDatabase().ref("greencloud");
 }
