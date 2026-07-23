@@ -1,16 +1,17 @@
 "use strict";
 
 const { getApps, initializeApp } = require("firebase-admin/app");
-const { getDatabase } = require("firebase-admin/database");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
-const {
-  PairingFinalizationError,
-  normalizePairingCode,
-} = require("./pairing-finalization");
-const { finalizePairingTransaction } = require("./pairing-transaction");
 
 if (getApps().length === 0) {
   initializeApp();
+}
+
+function greenCloudRoot() {
+  // Keep the database package out of Firebase's deployment-time discovery path.
+  // It is loaded only when an authenticated callable reaches its transaction.
+  const { getDatabase } = require("firebase-admin/database");
+  return getDatabase().ref("greencloud");
 }
 
 exports.finalizePairing = onCall(
@@ -24,6 +25,12 @@ exports.finalizePairing = onCall(
       throw new HttpsError("unauthenticated", "Authentication is required.");
     }
 
+    const {
+      PairingFinalizationError,
+      normalizePairingCode,
+    } = require("./pairing-finalization");
+    const { finalizePairingTransaction } = require("./pairing-transaction");
+
     let pairingCode;
     try {
       pairingCode = normalizePairingCode(request.data?.pairingCode);
@@ -35,7 +42,7 @@ exports.finalizePairing = onCall(
     }
 
     try {
-      return await finalizePairingTransaction(getDatabase().ref("greencloud"), {
+      return await finalizePairingTransaction(greenCloudRoot(), {
         pairingCode,
         requesterUid: request.auth.uid,
         nowMs: Date.now(),
@@ -50,6 +57,51 @@ exports.finalizePairing = onCall(
         throw new HttpsError(error.code, error.message);
       }
       throw new HttpsError("internal", "Pairing finalization failed.");
+    }
+  },
+);
+
+exports.unpairDevice = onCall(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+  },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "Authentication is required.");
+    }
+
+    const {
+      DeviceUnpairError,
+      normalizeDeviceId,
+    } = require("./device-unpair");
+    const { unpairDeviceTransaction } = require("./device-unpair-transaction");
+
+    let deviceId;
+    try {
+      deviceId = normalizeDeviceId(request.data?.deviceId);
+    } catch (error) {
+      if (error instanceof DeviceUnpairError) {
+        throw new HttpsError(error.code, error.message);
+      }
+      throw error;
+    }
+
+    try {
+      return await unpairDeviceTransaction(greenCloudRoot(), {
+        deviceId,
+        requesterUid: request.auth.uid,
+        nowMs: Date.now(),
+      });
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      if (error instanceof DeviceUnpairError) {
+        throw new HttpsError(error.code, error.message);
+      }
+      throw new HttpsError("internal", "Device unpair failed.");
     }
   },
 );
