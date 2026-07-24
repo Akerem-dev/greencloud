@@ -127,7 +127,8 @@ test("routes profile and workspace writes through the adapter boundary", () => {
   assert.match(providerSource, /normalizeIdentitySettingsPatch/);
   assert.match(providerSource, /validateWorkspaceIdentity/);
   assert.match(providerSource, /validateProfileName/);
-  assert.match(providerSource, /updateBaseSettings\(\{/);
+  assert.match(providerSource, /const normalizedPatch = \{/);
+  assert.match(providerSource, /updateBaseSettings\(normalizedPatch\)/);
   assert.match(providerSource, /saveBaseWorkspaceIdentity\(normalized\)/);
   assert.match(providerSource, /updateBaseProfileName\(normalized\)/);
 });
