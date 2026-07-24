@@ -8,6 +8,10 @@ import {
   realtimeDatabase,
 } from "@/lib/firebase";
 import {
+  AUTH_SESSION_BLOCKED_EVENT,
+  assertFirebaseAuthSessionOnly,
+} from "@/lib/auth-session-integrity.mjs";
+import {
   AUTOMATION_COMMAND_BLOCKED_EVENT,
   getManualIrrigationDecision,
   normalizeAutomationPatch,
@@ -19,6 +23,7 @@ import {
   normalizeDeviceIdentityPatch,
   normalizePairingDeviceIdentity,
 } from "@/lib/device-mutation-safety.mjs";
+import { logoutFromGreenCloud } from "@/lib/firebase-auth";
 import { pairedResultToDevice } from "@/lib/firebase-pairing-device.mjs";
 import {
   PairingFlowError,
@@ -114,6 +119,14 @@ function hasAutomationTelemetry(device: Device) {
   );
 }
 
+function emitBlockedAuthSession(reason: string) {
+  window.dispatchEvent(
+    new CustomEvent(AUTH_SESSION_BLOCKED_EVENT, {
+      detail: { reason },
+    }),
+  );
+}
+
 function emitBlockedAutomationCommand(reason: string) {
   window.dispatchEvent(
     new CustomEvent(AUTOMATION_COMMAND_BLOCKED_EVENT, {
@@ -148,6 +161,12 @@ function settingsErrorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
     : "The settings change was blocked safely.";
+}
+
+function authSessionErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "The authentication session change was blocked safely.";
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -346,6 +365,23 @@ export function useAppState(): AppStateContextValue {
     [updateBaseProfileName],
   );
 
+  const loginToWorkspace = useCallback(
+    (_name: string, _email: string) => {
+      try {
+        assertFirebaseAuthSessionOnly();
+      } catch (error) {
+        emitBlockedAuthSession(authSessionErrorMessage(error));
+      }
+    },
+    [],
+  );
+
+  const logoutFromWorkspace = useCallback(() => {
+    void logoutFromGreenCloud().catch((error) => {
+      emitBlockedAuthSession(authSessionErrorMessage(error));
+    });
+  }, []);
+
   const startIrrigation = useCallback(
     (deviceId?: string) => {
       const targetId = deviceId ?? selectedDevice.id;
@@ -394,10 +430,14 @@ export function useAppState(): AppStateContextValue {
       updateSetting,
       saveWorkspaceIdentity,
       updateProfileName,
+      loginToWorkspace,
+      logoutFromWorkspace,
       startIrrigation,
     }),
     [
       base,
+      loginToWorkspace,
+      logoutFromWorkspace,
       pairDeviceByCode,
       removeDevice,
       saveWorkspaceIdentity,
