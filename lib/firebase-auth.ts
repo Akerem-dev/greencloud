@@ -7,6 +7,12 @@ import {
   type User,
 } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase";
+import {
+  AuthSessionIntegrityError,
+  normalizeAuthDisplayName,
+  normalizeAuthLoginInput,
+  normalizeAuthRegistrationInput,
+} from "@/lib/auth-session-integrity.mjs";
 
 export type GreenCloudAuthUser = {
   uid: string;
@@ -25,6 +31,10 @@ export function mapFirebaseUser(user: User): GreenCloudAuthUser {
 }
 
 export function getAuthErrorMessage(error: unknown) {
+  if (error instanceof AuthSessionIntegrityError) {
+    return error.message;
+  }
+
   const code =
     typeof error === "object" &&
     error !== null &&
@@ -97,25 +107,26 @@ export async function registerWithEmailPassword({
   password: string;
   displayName?: string;
 }) {
-  const cleanEmail = email.trim();
-  const cleanDisplayName = displayName?.trim();
+  const normalized = normalizeAuthRegistrationInput({
+    email,
+    password,
+    displayName,
+  });
 
   const credential = await createUserWithEmailAndPassword(
     firebaseAuth,
-    cleanEmail,
-    password,
+    normalized.email,
+    normalized.password,
   );
 
-  if (cleanDisplayName) {
-    await updateProfile(credential.user, {
-      displayName: cleanDisplayName,
-    });
-  }
+  await updateProfile(credential.user, {
+    displayName: normalized.displayName,
+  });
 
   return {
     uid: credential.user.uid,
     email: credential.user.email,
-    displayName: cleanDisplayName || credential.user.displayName,
+    displayName: normalized.displayName,
   };
 }
 
@@ -126,22 +137,18 @@ export async function loginWithEmailPassword({
   email: string;
   password: string;
 }) {
+  const normalized = normalizeAuthLoginInput({ email, password });
   const credential = await signInWithEmailAndPassword(
     firebaseAuth,
-    email.trim(),
-    password,
+    normalized.email,
+    normalized.password,
   );
 
   return mapFirebaseUser(credential.user);
 }
 
 export async function updateCurrentUserDisplayName(displayName: string) {
-  const cleanDisplayName = displayName.trim();
-
-  if (!cleanDisplayName) {
-    throw new Error("Profile name is required.");
-  }
-
+  const cleanDisplayName = normalizeAuthDisplayName(displayName);
   const user = firebaseAuth.currentUser;
 
   if (!user) {

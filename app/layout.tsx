@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import Script from "next/script";
+import AuthSessionSafetyBoundary from "@/components/auth/auth-session-safety-boundary";
 import { AppStateProvider } from "@/components/providers/app-state-provider";
 import "./globals.css";
 
@@ -119,7 +120,11 @@ export default function RootLayout({
       </head>
 
       <body>
-        <AppStateProvider>{children}</AppStateProvider>
+        <AppStateProvider>
+          <AuthSessionSafetyBoundary>
+            {children}
+          </AuthSessionSafetyBoundary>
+        </AppStateProvider>
       </body>
     </html>
   );
