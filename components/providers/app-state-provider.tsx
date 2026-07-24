@@ -25,6 +25,10 @@ import {
   pairDeviceWithProtectedClaim,
 } from "@/lib/firebase-pairing-flow.mjs";
 import {
+  SETTINGS_PREFERENCE_BLOCKED_EVENT,
+  normalizeSettingsPreferencePatch,
+} from "@/lib/settings-preference-validation.mjs";
+import {
   normalizeIdentitySettingsPatch,
   validateProfileName,
   validateWorkspaceIdentity,
@@ -126,10 +130,24 @@ function emitBlockedDeviceMutation(reason: string) {
   );
 }
 
+function emitBlockedSettingsPreference(reason: string) {
+  window.dispatchEvent(
+    new CustomEvent(SETTINGS_PREFERENCE_BLOCKED_EVENT, {
+      detail: { reason },
+    }),
+  );
+}
+
 function mutationErrorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
     : "The device change was blocked safely.";
+}
+
+function settingsErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "The settings change was blocked safely.";
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -276,15 +294,27 @@ export function useAppState(): AppStateContextValue {
 
   const updateSettings = useCallback(
     (patch: Partial<SettingsState>) => {
-      const identityPatch = normalizeIdentitySettingsPatch(
-        settings,
-        patch,
-      ) as Partial<SettingsState>;
+      try {
+        const preferencePatch = normalizeSettingsPreferencePatch(
+          settings,
+          patch,
+        ) as Partial<SettingsState>;
+        const identityPatch = normalizeIdentitySettingsPatch(
+          settings,
+          patch,
+        ) as Partial<SettingsState>;
 
-      updateBaseSettings({
-        ...patch,
-        ...identityPatch,
-      });
+        const normalizedPatch = {
+          ...preferencePatch,
+          ...identityPatch,
+        };
+
+        if (Object.keys(normalizedPatch).length === 0) return;
+
+        updateBaseSettings(normalizedPatch);
+      } catch (error) {
+        emitBlockedSettingsPreference(settingsErrorMessage(error));
+      }
     },
     [settings, updateBaseSettings],
   );
