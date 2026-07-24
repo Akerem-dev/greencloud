@@ -22,7 +22,8 @@
     "test:automation-safety": "node --test tests/automation/automation-safety-contract.test.mjs",
     "test:workspace-profile": "node --test tests/profile/workspace-profile-validation.test.mjs",
     "test:device-mutations": "node --test tests/devices/device-mutation-safety.test.mjs",
-    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse && npm run test:activity-operations && npm run test:automation-safety && npm run test:workspace-profile && npm run test:device-mutations"
+    "test:device-unpair-ui": "node --test tests/devices/trusted-device-unpair-ui.test.mjs",
+    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse && npm run test:activity-operations && npm run test:automation-safety && npm run test:workspace-profile && npm run test:device-mutations && npm run test:device-unpair-ui"
   },
   "dependencies": {
     "firebase": "12.16.0",
