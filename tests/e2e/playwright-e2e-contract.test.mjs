@@ -36,6 +36,10 @@ test("serializes shared-emulator browser tests and captures failure artifacts", 
   assert.match(config, /workers:\s*1/u);
   assert.match(config, /fullyParallel:\s*false/u);
   assert.match(config, /start-isolated-dev\.mjs/u);
+  assert.match(config, /const E2E_ORIGIN = "http:\/\/localhost:3000"/u);
+  assert.match(config, /baseURL:\s*E2E_ORIGIN/u);
+  assert.match(config, /url:\s*`\$\{E2E_ORIGIN\}\/auth`/u);
+  assert.doesNotMatch(config, /http:\/\/127\.0\.0\.1:3000/u);
   assert.match(config, /trace:\s*"retain-on-failure"/u);
   assert.match(config, /screenshot:\s*"only-on-failure"/u);
   assert.match(config, /video:\s*"retain-on-failure"/u);
