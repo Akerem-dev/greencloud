@@ -7,7 +7,6 @@ export const test = base.extend({
       await resetFirebaseEmulators();
       await context.clearCookies();
       await use({ projectId: "demo-greencloud" });
-      await resetFirebaseEmulators();
     },
     { auto: true },
   ],
