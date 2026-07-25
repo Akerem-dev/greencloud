@@ -57,7 +57,7 @@ test("pairs, monitors, renames, commands and securely unpairs an ESP32", async (
 
   await expect(page.getByText("67%", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("92%", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("E2E telemetry", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Updated E2E telemetry/i)).toBeVisible();
 
   await page.getByTitle("Edit device").click();
   await page.getByLabel("Device name").fill("E2E Renamed Mint");
