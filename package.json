@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:isolated": "node scripts/start-isolated-dev.mjs",
+    "emulators:start": "firebase emulators:start --only auth,database,functions --project demo-greencloud",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -25,7 +27,8 @@
     "test:device-unpair-ui": "node --test tests/devices/trusted-device-unpair-ui.test.mjs",
     "test:settings-preferences": "node --test tests/settings/settings-preference-validation.test.mjs",
     "test:auth-session": "node --test tests/auth/auth-session-integrity.test.mjs",
-    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse && npm run test:activity-operations && npm run test:automation-safety && npm run test:workspace-profile && npm run test:device-mutations && npm run test:device-unpair-ui && npm run test:settings-preferences && npm run test:auth-session"
+    "test:firebase-emulator-isolation": "node --test tests/firebase/firebase-emulator-isolation.test.mjs",
+    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse && npm run test:activity-operations && npm run test:automation-safety && npm run test:workspace-profile && npm run test:device-mutations && npm run test:device-unpair-ui && npm run test:settings-preferences && npm run test:auth-session && npm run test:firebase-emulator-isolation"
   },
   "dependencies": {
     "firebase": "12.16.0",
