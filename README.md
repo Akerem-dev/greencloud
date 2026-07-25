@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GreenCloud
 
-## Getting Started
+GreenCloud is a protected smart-irrigation workspace built with Next.js, Firebase Authentication, Realtime Database and callable Cloud Functions.
 
-First, run the development server:
+## Install
+
+```bash
+npm install
+npm --prefix functions install
+```
+
+Copy `.env.example` to `.env.local` only when an intentional real Firebase connection is needed. Development must select its Firebase target explicitly.
+
+## Safe local development
+
+Local account, database and callable testing must use the isolated `demo-greencloud` Firebase project.
+
+### Terminal 1 — Firebase emulators
+
+```bash
+npm run emulators:start
+```
+
+Wait until Auth, Realtime Database and Functions are ready. The Emulator UI is available on port 4000.
+
+### Terminal 2 — Next.js with fail-closed isolation
+
+```bash
+npm run dev:isolated
+```
+
+The launcher checks these local endpoints before starting Next.js:
+
+- Authentication: `127.0.0.1:9099`
+- Realtime Database: `127.0.0.1:9000`
+- Functions: `127.0.0.1:5001`
+
+If any required emulator is unavailable, development is blocked and Next.js does not start. The command forces `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true` and `NEXT_PUBLIC_FIREBASE_PROJECT_ID=demo-greencloud`, so it cannot silently fall back to the production project.
+
+Open `http://localhost:3000` after both terminals are running.
+
+## Intentional real Firebase development
+
+Plain development mode is reserved for an explicit real-project connection:
+
+```env
+NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false
+```
+
+Then provide every required Firebase Web App value in `.env.local` and run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Leaving the target undefined during development is treated as a configuration error.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Focused emulator-isolation contract:
 
-## Learn More
+```bash
+npm run test:firebase-emulator-isolation
+```
 
-To learn more about Next.js, take a look at the following resources:
+Complete security chain:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run test:security
+npm --prefix functions run check
+npm run lint
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Expected negative Firebase Rules denials and emulator shutdown messages are normal when the commands finish with exit code 0.
