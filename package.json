@@ -28,7 +28,14 @@
     "test:settings-preferences": "node --test tests/settings/settings-preference-validation.test.mjs",
     "test:auth-session": "node --test tests/auth/auth-session-integrity.test.mjs",
     "test:firebase-emulator-isolation": "node --test tests/firebase/firebase-emulator-isolation.test.mjs",
-    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse && npm run test:activity-operations && npm run test:automation-safety && npm run test:workspace-profile && npm run test:device-mutations && npm run test:device-unpair-ui && npm run test:settings-preferences && npm run test:auth-session && npm run test:firebase-emulator-isolation"
+    "test:e2e-contract": "node --test tests/e2e/playwright-e2e-contract.test.mjs",
+    "test:e2e:install": "playwright install chromium",
+    "test:e2e": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"playwright test\"",
+    "test:e2e:headed": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"playwright test --headed\"",
+    "test:e2e:auth": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"playwright test tests/e2e/auth-lifecycle.spec.mjs\"",
+    "test:e2e:device": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"playwright test tests/e2e/device-lifecycle.spec.mjs\"",
+    "test:e2e:report": "playwright show-report playwright-report",
+    "test:security": "npm run test:firebase-rules && npm run test:functions && npm run test:functions-integration && npm run test:functions-callable && npm run test:pairing-adapter && npm run test:pairing-ui && npm run test:pairing-progress && npm run test:pairing-single-entry && npm run test:dashboard-operations && npm run test:dashboard-pulse && npm run test:activity-operations && npm run test:automation-safety && npm run test:workspace-profile && npm run test:device-mutations && npm run test:device-unpair-ui && npm run test:settings-preferences && npm run test:auth-session && npm run test:firebase-emulator-isolation && npm run test:e2e-contract"
   },
   "dependencies": {
     "firebase": "12.16.0",
@@ -40,6 +47,7 @@
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.1",
+    "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
