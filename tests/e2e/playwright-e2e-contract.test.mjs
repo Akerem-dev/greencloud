@@ -47,7 +47,12 @@ test("cleans Auth and RTDB around every browser scenario", async () => {
   const harness = await source("harness");
   const fixtures = await source("fixtures");
 
-  assert.match(harness, /demo-greencloud-default-rtdb/u);
+  assert.match(harness, /E2E_PROJECT_ID\s*=\s*"demo-greencloud"/u);
+  assert.match(
+    harness,
+    /E2E_DATABASE_NAMESPACE\s*=\s*`\$\{E2E_PROJECT_ID\}-default-rtdb`/u,
+  );
+  assert.match(harness, /ns=\$\{E2E_DATABASE_NAMESPACE\}/u);
   assert.match(harness, /\/emulator\/v1\/projects\/\$\{E2E_PROJECT_ID\}\/accounts/u);
   assert.match(harness, /greenCloudRoot\.remove\(\)/u);
   assert.match(fixtures, /resetFirebaseEmulators\(\)/u);
@@ -64,7 +69,7 @@ test("models device pairing, telemetry, commands and trusted unpair", async () =
   assert.match(harness, /decidePendingPairing/u);
   assert.match(harness, /seedDeviceTelemetry/u);
   assert.match(harness, /acknowledgeDeviceCommand/u);
-  assert.match(device, /Pair device/u);
+  assert.match(device, /pairDeviceThroughUi\(page,\s*DEVICE\)/u);
   assert.match(device, /deviceOwners/u);
   assert.match(device, /IRRIGATE/u);
   assert.match(device, /Device removed securely/u);
