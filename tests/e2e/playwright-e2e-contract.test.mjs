@@ -4,6 +4,7 @@ import test from "node:test";
 
 const files = {
   package: new URL("../../package.json", import.meta.url),
+  eslint: new URL("../../eslint.config.mjs", import.meta.url),
   config: new URL("../../playwright.config.mjs", import.meta.url),
   harness: new URL("./support/emulator-harness.mjs", import.meta.url),
   fixtures: new URL("./support/fixtures.mjs", import.meta.url),
@@ -32,6 +33,7 @@ test("runs Playwright only inside the isolated Firebase emulator stack", async (
 
 test("serializes shared-emulator browser tests and captures failure artifacts", async () => {
   const config = await source("config");
+  const eslint = await source("eslint");
 
   assert.match(config, /workers:\s*1/u);
   assert.match(config, /fullyParallel:\s*false/u);
@@ -45,6 +47,8 @@ test("serializes shared-emulator browser tests and captures failure artifacts", 
   assert.match(config, /video:\s*"retain-on-failure"/u);
   assert.match(config, /playwright-report/u);
   assert.match(config, /playwright-results\.json/u);
+  assert.match(eslint, /"playwright-report\/\*\*"/u);
+  assert.match(eslint, /"test-results\/\*\*"/u);
 });
 
 test("cleans Auth and RTDB around every browser scenario", async () => {
