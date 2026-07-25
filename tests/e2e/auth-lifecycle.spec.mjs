@@ -48,16 +48,24 @@ test("rejects invalid registration before creating an emulator account", async (
 
   await page.goto("/auth");
   await page.getByRole("button", { name: "Register", exact: true }).click();
-  await page.getByLabel("Workspace owner name").fill(" ");
-  await page.getByLabel("Email").fill(invalidEmail);
-  await page.getByLabel("Password").fill(E2E_PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
+  await page
+    .getByLabel("Workspace owner name", { exact: true })
+    .fill(" ");
+  await page.getByLabel("Email", { exact: true }).fill(invalidEmail);
+  await page.getByLabel("Password", { exact: true }).fill(E2E_PASSWORD);
+  await page
+    .getByRole("button", { name: "Create account", exact: true })
+    .click();
 
   await expect(page.getByText(/profile name|required/i)).toBeVisible();
   expect(await findUserByEmail(invalidEmail)).toBeNull();
 
-  await page.getByLabel("Workspace owner name").fill("A".repeat(61));
-  await page.getByRole("button", { name: "Create account" }).click();
+  await page
+    .getByLabel("Workspace owner name", { exact: true })
+    .fill("A".repeat(61));
+  await page
+    .getByRole("button", { name: "Create account", exact: true })
+    .click();
   await expect(page.getByText(/60|long|maximum/i)).toBeVisible();
   expect(await findUserByEmail(invalidEmail)).toBeNull();
 });
