@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const E2E_ORIGIN = "http://localhost:3000";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.spec.mjs",
@@ -17,7 +19,7 @@ export default defineConfig({
     ["json", { outputFile: "test-results/playwright-results.json" }],
   ],
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: E2E_ORIGIN,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -34,7 +36,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "node scripts/start-isolated-dev.mjs",
-    url: "http://127.0.0.1:3000/auth",
+    url: `${E2E_ORIGIN}/auth`,
     reuseExistingServer: false,
     timeout: 120_000,
     stdout: "pipe",
