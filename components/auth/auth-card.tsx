@@ -183,15 +183,19 @@ export default function AuthCard({ onSuccess }: AuthCardProps) {
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-4">
                 {isRegisterMode ? (
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-[var(--gc-soft)]">
+                  <div className="block">
+                    <label
+                      htmlFor="greencloud-auth-display-name"
+                      className="mb-2 block text-sm font-semibold text-[var(--gc-soft)]"
+                    >
                       Workspace owner name
-                    </span>
+                    </label>
 
                     <span className="relative block">
                       <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--gc-muted)]" />
 
                       <input
+                        id="greencloud-auth-display-name"
                         value={displayName}
                         onChange={(event) => setDisplayName(event.target.value)}
                         placeholder="Kerem"
@@ -199,18 +203,22 @@ export default function AuthCard({ onSuccess }: AuthCardProps) {
                         className="w-full rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_74%,black)] py-4 pl-12 pr-4 text-base font-semibold text-[var(--gc-text)] outline-none transition placeholder:text-[var(--gc-muted)] focus:border-[color-mix(in_srgb,var(--gc-accent)_42%,transparent)] focus:shadow-[0_0_28px_var(--gc-glow)]"
                       />
                     </span>
-                  </label>
+                  </div>
                 ) : null}
 
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-[var(--gc-soft)]">
+                <div className="block">
+                  <label
+                    htmlFor="greencloud-auth-email"
+                    className="mb-2 block text-sm font-semibold text-[var(--gc-soft)]"
+                  >
                     Email
-                  </span>
+                  </label>
 
                   <span className="relative block">
                     <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--gc-muted)]" />
 
                     <input
+                      id="greencloud-auth-email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       type="email"
@@ -220,17 +228,21 @@ export default function AuthCard({ onSuccess }: AuthCardProps) {
                       className="w-full rounded-[22px] border border-[color-mix(in_srgb,var(--gc-border)_92%,transparent)] bg-[color-mix(in_srgb,var(--gc-bg)_74%,black)] py-4 pl-12 pr-4 text-base font-semibold text-[var(--gc-text)] outline-none transition placeholder:text-[var(--gc-muted)] focus:border-[color-mix(in_srgb,var(--gc-accent)_42%,transparent)] focus:shadow-[0_0_28px_var(--gc-glow)]"
                     />
                   </span>
-                </label>
+                </div>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-[var(--gc-soft)]">
+                <div className="block">
+                  <label
+                    htmlFor="greencloud-auth-password"
+                    className="mb-2 block text-sm font-semibold text-[var(--gc-soft)]"
+                  >
                     Password
-                  </span>
+                  </label>
 
                   <span className="relative block">
                     <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--gc-muted)]" />
 
                     <input
+                      id="greencloud-auth-password"
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       type={showPassword ? "text" : "password"}
@@ -258,7 +270,7 @@ export default function AuthCard({ onSuccess }: AuthCardProps) {
                       )}
                     </button>
                   </span>
-                </label>
+                </div>
 
                 {errorMessage ? (
                   <div className="rounded-[22px] border border-[color-mix(in_srgb,var(--gc-danger)_38%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_12%,transparent)] p-4 text-sm font-semibold leading-6 text-[var(--gc-text)]">
