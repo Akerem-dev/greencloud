@@ -101,6 +101,16 @@ test("covers auth, settings persistence and cross-account isolation", async () =
   assert.match(authCard, /htmlFor="greencloud-auth-password"/u);
   assert.match(authCard, /id="greencloud-auth-password"/u);
   assert.match(authCard, /aria-label=\{/u);
+  assert.match(
+    helpers,
+    /getByLabel\("Password",\s*\{\s*exact:\s*true\s*\}\)/u,
+  );
+  assert.match(
+    auth,
+    /getByLabel\("Password",\s*\{\s*exact:\s*true\s*\}\)/u,
+  );
+  assert.doesNotMatch(helpers, /getByLabel\("Password"\)\./u);
+  assert.doesNotMatch(auth, /getByLabel\("Password"\)\./u);
   assert.match(settings, /rain-glass/u);
   assert.match(settings, /notificationMode/u);
   assert.match(settings, /displayName/u);
