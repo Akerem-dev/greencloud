@@ -73,6 +73,7 @@ test("cleans Auth and RTDB around every browser scenario", async () => {
 test("models device pairing, telemetry, commands and trusted unpair", async () => {
   const harness = await source("harness");
   const device = await source("device");
+  const helpers = await source("helpers");
 
   assert.match(harness, /seedAvailableDevice/u);
   assert.match(harness, /decidePendingPairing/u);
@@ -83,6 +84,9 @@ test("models device pairing, telemetry, commands and trusted unpair", async () =
   assert.match(device, /IRRIGATE/u);
   assert.match(device, /Device removed securely/u);
   assert.match(device, /FACTORY_RESET/u);
+  assert.match(helpers, /name:\s*"Add ESP32"/u);
+  assert.match(helpers, /scrollIntoViewIfNeeded\(\)/u);
+  assert.match(helpers, /expect\(codeInput\)\.toBeVisible\(\)/u);
 });
 
 test("covers auth, settings persistence and cross-account isolation", async () => {
