@@ -4,8 +4,9 @@ import test from "node:test";
 
 const files = {
   package: new URL("../../package.json", import.meta.url),
-  eslint: new URL("../../eslint.config.mjs", import.meta.url),
   config: new URL("../../playwright.config.mjs", import.meta.url),
+  eslint: new URL("../../eslint.config.mjs", import.meta.url),
+  authCard: new URL("../../components/auth/auth-card.tsx", import.meta.url),
   harness: new URL("./support/emulator-harness.mjs", import.meta.url),
   fixtures: new URL("./support/fixtures.mjs", import.meta.url),
   helpers: new URL("./support/ui-helpers.mjs", import.meta.url),
@@ -86,12 +87,20 @@ test("models device pairing, telemetry, commands and trusted unpair", async () =
 
 test("covers auth, settings persistence and cross-account isolation", async () => {
   const auth = await source("auth");
+  const authCard = await source("authCard");
   const settings = await source("settings");
   const tenant = await source("tenant");
   const helpers = await source("helpers");
 
   assert.match(auth, /register, sign-out and login/u);
   assert.match(auth, /rejects invalid registration/u);
+  assert.match(authCard, /htmlFor="greencloud-auth-display-name"/u);
+  assert.match(authCard, /id="greencloud-auth-display-name"/u);
+  assert.match(authCard, /htmlFor="greencloud-auth-email"/u);
+  assert.match(authCard, /id="greencloud-auth-email"/u);
+  assert.match(authCard, /htmlFor="greencloud-auth-password"/u);
+  assert.match(authCard, /id="greencloud-auth-password"/u);
+  assert.match(authCard, /aria-label=\{/u);
   assert.match(settings, /rain-glass/u);
   assert.match(settings, /notificationMode/u);
   assert.match(settings, /displayName/u);
