@@ -13,10 +13,10 @@ export async function registerUser(
 ) {
   await page.goto("/auth");
   await page.getByRole("button", { name: "Register", exact: true }).click();
-  await page.getByLabel("Workspace owner name").fill(displayName);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Create account" }).click();
+  await page.getByLabel("Workspace owner name", { exact: true }).fill(displayName);
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
   const user = await getUserByEmail(email);
@@ -33,8 +33,8 @@ export async function loginUser(
 ) {
   await page.goto("/auth");
   await page.getByRole("button", { name: "Login", exact: true }).click();
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 }
@@ -54,9 +54,9 @@ export async function pairDeviceThroughUi(
   } = {},
 ) {
   await page.goto("/devices");
-  await page.getByLabel("OLED code").fill(code);
-  await page.getByLabel("Device name").fill(name);
-  await page.getByLabel("Plant zone").fill(place);
-  await page.getByRole("button", { name: "Pair device" }).click();
+  await page.getByLabel("OLED code", { exact: true }).fill(code);
+  await page.getByLabel("Device name", { exact: true }).fill(name);
+  await page.getByLabel("Plant zone", { exact: true }).fill(place);
+  await page.getByRole("button", { name: "Pair device", exact: true }).click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
