@@ -54,9 +54,30 @@ export async function pairDeviceThroughUi(
   } = {},
 ) {
   await page.goto("/devices");
-  await page.getByLabel("OLED code", { exact: true }).fill(code);
-  await page.getByLabel("Device name", { exact: true }).fill(name);
-  await page.getByLabel("Plant zone", { exact: true }).fill(place);
+
+  const addDeviceButton = page.getByRole("button", {
+    name: "Add ESP32",
+    exact: true,
+  });
+
+  if (await addDeviceButton.isVisible()) {
+    await addDeviceButton.click();
+  }
+
+  const codeInput = page.getByLabel("OLED code", { exact: true });
+  const nameInput = page.getByLabel("Device name", { exact: true });
+  const placeInput = page.getByLabel("Plant zone", { exact: true });
+
+  await codeInput.scrollIntoViewIfNeeded();
+  await expect(codeInput).toBeVisible();
+  await codeInput.fill(code);
+
+  await nameInput.scrollIntoViewIfNeeded();
+  await nameInput.fill(name);
+
+  await placeInput.scrollIntoViewIfNeeded();
+  await placeInput.fill(place);
+
   await page.getByRole("button", { name: "Pair device", exact: true }).click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
