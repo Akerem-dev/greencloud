@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
   AlertTriangle,
   ArrowRight,
   BarChart3,
   CheckCircle2,
-  Droplets,
   Gauge,
   Radio,
   RefreshCw,
@@ -43,15 +42,15 @@ type AnalyticsDevice = Device & {
   rawSoil?: number;
   soilVoltage?: number;
   temperature?: number;
-  humidity?: number;
-  waterLevel?: number;
-  waterLevelStatus?: string;
-  rainStatus?: string;
-  safeMode?: boolean;
-  pumpEnabled?: boolean;
 };
 
-type ActivityLayer = "Telemetry" | "Command" | "Safety" | "Workspace" | "Attention" | "System";
+type ActivityLayer =
+  | "Telemetry"
+  | "Command"
+  | "Safety"
+  | "Workspace"
+  | "Attention"
+  | "System";
 
 function clampPercent(value: number) {
   return Math.max(0, Math.min(100, value));
@@ -85,68 +84,29 @@ function deviceTone(status: Device["status"]): Gc2StatusTone {
   return "neutral";
 }
 
-function moistureBand(
-  device: AnalyticsDevice,
-  threshold: number,
-): { label: string; tone: Gc2StatusTone } {
-  if (!hasTelemetry(device)) return { label: "No packet", tone: "neutral" };
-  if (device.moisture <= threshold) return { label: "At threshold", tone: "warning" };
-  if (device.moisture <= threshold + 15) return { label: "Near threshold", tone: "info" };
-  return { label: "Above threshold", tone: "success" };
+function moistureBand(device: AnalyticsDevice, threshold: number) {
+  if (!hasTelemetry(device)) {
+    return { label: "No packet", tone: "neutral" as Gc2StatusTone };
+  }
+  if (device.moisture <= threshold) {
+    return { label: "At threshold", tone: "warning" as Gc2StatusTone };
+  }
+  if (device.moisture <= threshold + 15) {
+    return { label: "Near threshold", tone: "info" as Gc2StatusTone };
+  }
+  return { label: "Above threshold", tone: "success" as Gc2StatusTone };
 }
 
 function activityLayer(item: ActivityItem): ActivityLayer {
   const text = `${item.title} ${item.description} ${item.body ?? ""} ${item.status}`.toLowerCase();
 
-  if (
-    text.includes("warning") ||
-    text.includes("blocked") ||
-    text.includes("failed") ||
-    text.includes("rejected") ||
-    text.includes("timeout") ||
-    text.includes("risk")
-  ) {
+  if (/warning|blocked|failed|rejected|timeout|risk/u.test(text)) {
     return "Attention";
   }
-
-  if (
-    text.includes("watering") ||
-    text.includes("irrigation") ||
-    text.includes("pump") ||
-    text.includes("command")
-  ) {
-    return "Command";
-  }
-
-  if (
-    text.includes("protected") ||
-    text.includes("safe") ||
-    text.includes("relay") ||
-    text.includes("lock") ||
-    text.includes("dry-run")
-  ) {
-    return "Safety";
-  }
-
-  if (
-    text.includes("firebase") ||
-    text.includes("workspace") ||
-    text.includes("pairing") ||
-    text.includes("sync")
-  ) {
-    return "Workspace";
-  }
-
-  if (
-    text.includes("telemetry") ||
-    text.includes("moisture") ||
-    text.includes("soil") ||
-    text.includes("sensor") ||
-    text.includes("signal")
-  ) {
-    return "Telemetry";
-  }
-
+  if (/watering|irrigation|pump|command/u.test(text)) return "Command";
+  if (/protected|safe|relay|lock|dry-run/u.test(text)) return "Safety";
+  if (/firebase|workspace|pairing|sync/u.test(text)) return "Workspace";
+  if (/telemetry|moisture|soil|sensor|signal/u.test(text)) return "Telemetry";
   return "System";
 }
 
@@ -162,9 +122,9 @@ function EvidenceRow({
   title,
   children,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="grid grid-cols-[38px_minmax(0,1fr)] gap-3 border-b border-[var(--gc2-line)] py-4 last:border-b-0">
@@ -195,7 +155,6 @@ export default function Gc2EnvironmentalAnalytics() {
   const globalQuery = searchQuery.trim().toLowerCase();
   const sourceDevices = useMemo(() => {
     if (!globalQuery) return devices;
-
     return devices.filter((device) =>
       `${device.name} ${device.place} ${device.id} ${device.status}`
         .toLowerCase()
@@ -222,15 +181,16 @@ export default function Gc2EnvironmentalAnalytics() {
 
   const analyticsDevices = scopedDevices as AnalyticsDevice[];
   const telemetryDevices = analyticsDevices.filter(hasTelemetry);
-  const onlineCount = analyticsDevices.filter((device) => device.status === "Online").length;
+  const onlineCount = analyticsDevices.filter(
+    (device) => device.status === "Online",
+  ).length;
   const averageMoisture = telemetryDevices.length
     ? telemetryDevices.reduce((total, device) => total + device.moisture, 0) /
       telemetryDevices.length
     : null;
-  const signalDevices = telemetryDevices.filter((device) => Number.isFinite(device.signal));
-  const averageSignal = signalDevices.length
-    ? signalDevices.reduce((total, device) => total + device.signal, 0) /
-      signalDevices.length
+  const averageSignal = telemetryDevices.length
+    ? telemetryDevices.reduce((total, device) => total + device.signal, 0) /
+      telemetryDevices.length
     : null;
 
   const layerCounts = useMemo(() => {
@@ -239,22 +199,30 @@ export default function Gc2EnvironmentalAnalytics() {
       const layer = activityLayer(item);
       counts.set(layer, (counts.get(layer) ?? 0) + 1);
     }
-    return (["Telemetry", "Command", "Safety", "Workspace", "Attention", "System"] as ActivityLayer[])
+    return (
+      [
+        "Telemetry",
+        "Command",
+        "Safety",
+        "Workspace",
+        "Attention",
+        "System",
+      ] as ActivityLayer[]
+    )
       .map((layer) => ({ layer, count: counts.get(layer) ?? 0 }))
       .filter((item) => item.count > 0);
   }, [scopedActivity]);
 
-  const selected = devices.find((device) => device.id === selectedDevice.id) as
-    | AnalyticsDevice
-    | undefined;
+  const selected = devices.find(
+    (device) => device.id === selectedDevice.id,
+  ) as AnalyticsDevice | undefined;
+  const activityTotal = Math.max(1, scopedActivity.length);
 
   function refreshSelected() {
     if (!selected) return;
     refreshTelemetry(selected.id);
     setFeedback(`Telemetry refresh requested for ${selected.name}.`);
   }
-
-  const activityTotal = Math.max(1, scopedActivity.length);
 
   return (
     <Gc2ProtectedShell>
@@ -268,7 +236,11 @@ export default function Gc2EnvironmentalAnalytics() {
               <Gc2LinkButton href="/activity" variant="quiet">
                 Operations log
               </Gc2LinkButton>
-              <Gc2Button variant="secondary" disabled={!selected} onClick={refreshSelected}>
+              <Gc2Button
+                variant="secondary"
+                disabled={!selected}
+                onClick={refreshSelected}
+              >
                 <RefreshCw aria-hidden="true" className="h-4 w-4" />
                 Refresh selected node
               </Gc2Button>
@@ -277,7 +249,11 @@ export default function Gc2EnvironmentalAnalytics() {
         />
 
         {feedback ? (
-          <Gc2Notice tone="success" title="Analytics source updated" icon={<CheckCircle2 className="h-5 w-5" />}>
+          <Gc2Notice
+            tone="success"
+            title="Analytics source updated"
+            icon={<CheckCircle2 className="h-5 w-5" />}
+          >
             {feedback}
           </Gc2Notice>
         ) : null}
@@ -288,7 +264,8 @@ export default function Gc2EnvironmentalAnalytics() {
               <p className="gc2-kicker">Current evidence window</p>
               <h2 className="gc2-heading-md mt-2">Fleet snapshot</h2>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--gc2-ink-soft)]">
-                Values below are calculated only from current devices with a trustworthy packet. Missing telemetry remains unavailable rather than being estimated.
+                Values are calculated only from current devices with a trustworthy
+                packet. Missing telemetry remains unavailable rather than estimated.
               </p>
             </div>
             <Gc2Select
@@ -306,10 +283,32 @@ export default function Gc2EnvironmentalAnalytics() {
           </div>
 
           <div className="grid gap-5 border-t border-[var(--gc2-line)] p-5 sm:grid-cols-2 sm:p-7 xl:grid-cols-4">
-            <Gc2Metric label="Scoped devices" value={analyticsDevices.length} detail={`${onlineCount} currently online`} />
-            <Gc2Metric label="Trusted packets" value={telemetryDevices.length} detail="Devices included in averages" />
-            <Gc2Metric label="Average moisture" value={averageMoisture === null ? "—" : `${Math.round(averageMoisture)}%`} detail={`Policy threshold ${automation.moistureThreshold}%`} />
-            <Gc2Metric label="Average signal" value={averageSignal === null ? "—" : `${Math.round(averageSignal)}%`} detail="Current packet signal only" />
+            <Gc2Metric
+              label="Scoped devices"
+              value={analyticsDevices.length}
+              detail={`${onlineCount} currently online`}
+            />
+            <Gc2Metric
+              label="Trusted packets"
+              value={telemetryDevices.length}
+              detail="Devices included in averages"
+            />
+            <Gc2Metric
+              label="Average moisture"
+              value={
+                averageMoisture === null
+                  ? "—"
+                  : `${Math.round(averageMoisture)}%`
+              }
+              detail={`Policy threshold ${automation.moistureThreshold}%`}
+            />
+            <Gc2Metric
+              label="Average signal"
+              value={
+                averageSignal === null ? "—" : `${Math.round(averageSignal)}%`
+              }
+              detail="Current packet signal only"
+            />
           </div>
         </Gc2Surface>
 
@@ -317,27 +316,47 @@ export default function Gc2EnvironmentalAnalytics() {
           <Gc2Surface className="col-span-12 overflow-hidden p-0 lg:col-span-8">
             <div className="border-b border-[var(--gc2-line)] p-5 sm:p-6">
               <p className="gc2-kicker">Current moisture distribution</p>
-              <h2 className="mt-2 text-xl font-bold text-[var(--gc2-ink)]">Policy-relative device comparison</h2>
+              <h2 className="mt-2 text-xl font-bold text-[var(--gc2-ink)]">
+                Policy-relative device comparison
+              </h2>
               <p className="mt-2 text-sm leading-6 text-[var(--gc2-ink-soft)]">
-                Bar lengths come directly from each device&apos;s current moisture value. They are not reconstructed history.
+                Bar lengths come directly from each device&apos;s current moisture
+                value. They are not reconstructed history.
               </p>
             </div>
 
             {telemetryDevices.length > 0 ? (
               <div className="divide-y divide-[var(--gc2-line)]">
                 {telemetryDevices.map((device) => {
-                  const band = moistureBand(device, automation.moistureThreshold);
+                  const band = moistureBand(
+                    device,
+                    automation.moistureThreshold,
+                  );
                   return (
-                    <div key={device.id} className="grid gap-4 p-5 sm:grid-cols-[minmax(160px,0.75fr)_minmax(220px,1fr)_auto] sm:items-center sm:p-6">
+                    <div
+                      key={device.id}
+                      className="grid gap-4 p-5 sm:grid-cols-[minmax(160px,0.75fr)_minmax(220px,1fr)_auto] sm:items-center sm:p-6"
+                    >
                       <div className="min-w-0">
-                        <Link href={`/devices/${encodeURIComponent(device.id)}`} className="font-bold text-[var(--gc2-ink)] underline-offset-4 hover:underline">
+                        <Link
+                          href={`/devices/${encodeURIComponent(device.id)}`}
+                          className="font-bold text-[var(--gc2-ink)] underline-offset-4 hover:underline"
+                        >
                           {device.name}
                         </Link>
-                        <p className="mt-1 text-xs text-[var(--gc2-ink-soft)]">{device.place}</p>
+                        <p className="mt-1 text-xs text-[var(--gc2-ink-soft)]">
+                          {device.place}
+                        </p>
                       </div>
                       <div>
-                        <div className="h-2 overflow-hidden rounded-full bg-[var(--gc2-canvas-muted)]" aria-label={`${device.name} moisture ${Math.round(device.moisture)} percent`}>
-                          <div className="h-full rounded-full bg-[var(--gc2-moss)]" style={{ width: `${clampPercent(device.moisture)}%` }} />
+                        <div
+                          className="h-2 overflow-hidden rounded-full bg-[var(--gc2-canvas-muted)]"
+                          aria-label={`${device.name} moisture ${Math.round(device.moisture)} percent`}
+                        >
+                          <div
+                            className="h-full rounded-full bg-[var(--gc2-moss)]"
+                            style={{ width: `${clampPercent(device.moisture)}%` }}
+                          />
                         </div>
                         <div className="gc2-data mt-2 flex justify-between text-[10px] text-[var(--gc2-ink-muted)]">
                           <span>0%</span>
@@ -352,8 +371,13 @@ export default function Gc2EnvironmentalAnalytics() {
               </div>
             ) : (
               <div className="p-6 sm:p-8">
-                <Gc2Notice tone="info" title="No trustworthy moisture packets" icon={<Gauge className="h-5 w-5" />}>
-                  The selected scope has no current device packet that can support a moisture comparison.
+                <Gc2Notice
+                  tone="info"
+                  title="No trustworthy moisture packets"
+                  icon={<Gauge className="h-5 w-5" />}
+                >
+                  The selected scope has no current packet that can support a
+                  moisture comparison.
                 </Gc2Notice>
               </div>
             )}
@@ -363,18 +387,28 @@ export default function Gc2EnvironmentalAnalytics() {
             <Gc2Surface className="overflow-hidden p-0">
               <div className="border-b border-[var(--gc2-line)] p-5">
                 <p className="gc2-kicker">Recorded event composition</p>
-                <h2 className="mt-2 text-lg font-bold text-[var(--gc2-ink)]">Activity layers</h2>
+                <h2 className="mt-2 text-lg font-bold text-[var(--gc2-ink)]">
+                  Activity layers
+                </h2>
               </div>
               {layerCounts.length > 0 ? (
                 <div className="p-5">
                   {layerCounts.map(({ layer, count }) => (
-                    <div key={layer} className="border-b border-[var(--gc2-line)] py-4 first:pt-0 last:border-b-0 last:pb-0">
+                    <div
+                      key={layer}
+                      className="border-b border-[var(--gc2-line)] py-4 first:pt-0 last:border-b-0 last:pb-0"
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <Gc2Status tone={layerTone(layer)}>{layer}</Gc2Status>
-                        <span className="gc2-data text-sm font-bold text-[var(--gc2-ink)]">{count}</span>
+                        <span className="gc2-data text-sm font-bold text-[var(--gc2-ink)]">
+                          {count}
+                        </span>
                       </div>
                       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--gc2-canvas-muted)]">
-                        <div className="h-full rounded-full bg-[var(--gc2-moss)]" style={{ width: `${(count / activityTotal) * 100}%` }} />
+                        <div
+                          className="h-full rounded-full bg-[var(--gc2-moss)]"
+                          style={{ width: `${(count / activityTotal) * 100}%` }}
+                        />
                       </div>
                     </div>
                   ))}
@@ -388,19 +422,36 @@ export default function Gc2EnvironmentalAnalytics() {
 
             <Gc2Surface className="p-5">
               <p className="gc2-kicker">Data confidence</p>
-              <h2 className="mt-2 text-lg font-bold text-[var(--gc2-ink)]">What these results mean</h2>
+              <h2 className="mt-2 text-lg font-bold text-[var(--gc2-ink)]">
+                What these results mean
+              </h2>
               <div className="mt-3">
-                <EvidenceRow icon={<Radio className="h-4 w-4" />} title="Current snapshot">
-                  Device averages use only the latest in-memory packets available through AppState.
+                <EvidenceRow
+                  icon={<Radio className="h-4 w-4" />}
+                  title="Current snapshot"
+                >
+                  Device averages use only the latest packets available through
+                  AppState.
                 </EvidenceRow>
-                <EvidenceRow icon={<Activity className="h-4 w-4" />} title="Recorded context">
-                  Event composition comes from the real operations feed, including active global search filtering.
+                <EvidenceRow
+                  icon={<Activity className="h-4 w-4" />}
+                  title="Recorded context"
+                >
+                  Event composition comes from the real operations feed and active
+                  global search.
                 </EvidenceRow>
-                <EvidenceRow icon={<ShieldCheck className="h-4 w-4" />} title="Missing-data policy">
-                  GreenCloud displays an em dash when a sensor channel or packet is unavailable.
+                <EvidenceRow
+                  icon={<ShieldCheck className="h-4 w-4" />}
+                  title="Missing-data policy"
+                >
+                  GreenCloud displays an em dash when a sensor channel is unavailable.
                 </EvidenceRow>
-                <EvidenceRow icon={<BarChart3 className="h-4 w-4" />} title="No invented trend line">
-                  This screen does not claim hourly, daily or weekly history because no historical series is exposed here.
+                <EvidenceRow
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  title="No invented trend line"
+                >
+                  This screen does not claim hourly, daily or weekly history because
+                  no historical series is exposed here.
                 </EvidenceRow>
               </div>
             </Gc2Surface>
@@ -411,7 +462,9 @@ export default function Gc2EnvironmentalAnalytics() {
           <div className="flex flex-col gap-4 border-b border-[var(--gc2-line)] p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
             <div>
               <p className="gc2-kicker">Device evidence table</p>
-              <h2 className="mt-2 text-xl font-bold text-[var(--gc2-ink)]">Current environmental channels</h2>
+              <h2 className="mt-2 text-xl font-bold text-[var(--gc2-ink)]">
+                Current environmental channels
+              </h2>
             </div>
             <Gc2LinkButton href="/devices" variant="quiet">
               Hardware inventory
@@ -437,19 +490,37 @@ export default function Gc2EnvironmentalAnalytics() {
                   return (
                     <tr key={device.id}>
                       <td>
-                        <Link href={`/devices/${encodeURIComponent(device.id)}`} className="font-bold text-[var(--gc2-moss-strong)] underline-offset-4 hover:underline">
+                        <Link
+                          href={`/devices/${encodeURIComponent(device.id)}`}
+                          className="font-bold text-[var(--gc2-moss-strong)] underline-offset-4 hover:underline"
+                        >
                           {device.name}
                         </Link>
-                        <span className="mt-1 block text-xs text-[var(--gc2-ink-soft)]">{device.place}</span>
+                        <span className="mt-1 block text-xs text-[var(--gc2-ink-soft)]">
+                          {device.place}
+                        </span>
                       </td>
-                      <td><Gc2Status tone={deviceTone(device.status)}>{device.status}</Gc2Status></td>
-                      <td className="gc2-data">{valuePercent(device.moisture, ready)}</td>
-                      <td className="gc2-data">{valuePercent(device.signal, ready)}</td>
-                      <td className="gc2-data">{valueNumber(device.temperature, "°C", 1)}</td>
                       <td>
-                        <span className="block text-sm font-bold text-[var(--gc2-ink)]">{device.sensorStatus ?? "Pending"}</span>
+                        <Gc2Status tone={deviceTone(device.status)}>
+                          {device.status}
+                        </Gc2Status>
+                      </td>
+                      <td className="gc2-data">
+                        {valuePercent(device.moisture, ready)}
+                      </td>
+                      <td className="gc2-data">
+                        {valuePercent(device.signal, ready)}
+                      </td>
+                      <td className="gc2-data">
+                        {valueNumber(device.temperature, "°C", 1)}
+                      </td>
+                      <td>
+                        <span className="block text-sm font-bold text-[var(--gc2-ink)]">
+                          {device.sensorStatus ?? "Pending"}
+                        </span>
                         <span className="gc2-data mt-1 block text-xs text-[var(--gc2-ink-muted)]">
-                          RAW {valueNumber(device.rawSoil)} · {valueNumber(device.soilVoltage, "V", 2)}
+                          RAW {valueNumber(device.rawSoil)} ·{" "}
+                          {valueNumber(device.soilVoltage, "V", 2)}
                         </span>
                       </td>
                     </tr>
@@ -459,15 +530,26 @@ export default function Gc2EnvironmentalAnalytics() {
             </Gc2Table>
           ) : (
             <div className="p-6 sm:p-8">
-              <Gc2Notice tone="warning" title="No devices match this scope" icon={<AlertTriangle className="h-5 w-5" />}>
-                Change the device scope or global search. Analytics cannot be calculated without matching workspace hardware.
+              <Gc2Notice
+                tone="warning"
+                title="No devices match this scope"
+                icon={<AlertTriangle className="h-5 w-5" />}
+              >
+                Change the device scope or global search. Analytics cannot be
+                calculated without matching workspace hardware.
               </Gc2Notice>
             </div>
           )}
         </Gc2Surface>
 
-        <Gc2Notice tone="info" title="Analytics boundary" icon={<Wifi className="h-5 w-5" />}>
-          This screen reads current AppState devices and activity only. It does not query Firebase directly, synthesize missing telemetry or claim a historical trend that the data model does not provide.
+        <Gc2Notice
+          tone="info"
+          title="Analytics boundary"
+          icon={<Wifi className="h-5 w-5" />}
+        >
+          This screen reads current AppState devices and activity only. It does not
+          query Firebase directly, synthesize missing telemetry or claim a historical
+          trend that the data model does not provide.
         </Gc2Notice>
       </div>
     </Gc2ProtectedShell>
