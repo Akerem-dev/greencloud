@@ -90,12 +90,18 @@ test("models device pairing, telemetry, commands and trusted unpair", async () =
     helpers,
     /getByLabel\("OLED code",\s*\{\s*exact:\s*true\s*\}\)\.first\(\)/u,
   );
+  assert.match(
+    helpers,
+    /locator\("button"\)\s*\.filter\(\{\s*hasText:\s*\/\^Pair device\$\/\s*\}\)/u,
+  );
   assert.match(helpers, /expect\(codeInput\)\.toBeAttached\(\)/u);
+  assert.match(helpers, /expect\(pairButton\)\.toBeAttached\(\)/u);
   assert.match(helpers, /fill\(code,\s*\{\s*force:\s*true\s*\}\)/u);
   assert.match(helpers, /fill\(name,\s*\{\s*force:\s*true\s*\}\)/u);
   assert.match(helpers, /fill\(place,\s*\{\s*force:\s*true\s*\}\)/u);
   assert.match(helpers, /pairButton\.evaluate\(\(element\) => element\.click\(\)\)/u);
   assert.match(helpers, /upcoming visual redesign/u);
+  assert.doesNotMatch(helpers, /getByRole\("button",\s*\{\s*name:\s*"Pair device"/u);
   assert.doesNotMatch(helpers, /expect\(codeInput\)\.toBeVisible\(\)/u);
 });
 
