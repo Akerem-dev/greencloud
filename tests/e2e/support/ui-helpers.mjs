@@ -54,43 +54,52 @@ export async function pairDeviceThroughUi(
   } = {},
 ) {
   await page.goto("/devices");
+  await expect(
+    page.getByRole("heading", { name: "Pair, rename, monitor.", exact: true }),
+  ).toBeVisible();
 
   const addDeviceButton = page.getByRole("button", {
     name: "Add ESP32",
     exact: true,
   });
+  const inlineHeading = page.getByRole("heading", {
+    name: "Connect ESP32.",
+    exact: true,
+  });
+
+  await expect(addDeviceButton.or(inlineHeading).first()).toBeVisible();
+
+  let pairingHeading;
 
   if (await addDeviceButton.isVisible()) {
     await addDeviceButton.click();
-  } else {
-    await page.evaluate(() => {
-      const scroller = document.scrollingElement ?? document.documentElement;
-      scroller.scrollTo(0, scroller.scrollHeight);
+    pairingHeading = page.getByRole("heading", {
+      name: "Add another ESP32.",
+      exact: true,
     });
-    await page.waitForTimeout(250);
+  } else {
+    pairingHeading = inlineHeading;
   }
 
-  const codeInput = page
-    .getByLabel("OLED code", { exact: true })
-    .filter({ visible: true })
-    .first();
-  const nameInput = page
-    .getByLabel("Device name", { exact: true })
-    .filter({ visible: true })
-    .first();
-  const placeInput = page
-    .getByLabel("Plant zone", { exact: true })
-    .filter({ visible: true })
-    .first();
+  await pairingHeading.evaluate((element) => {
+    element.scrollIntoView({ block: "center", behavior: "instant" });
+  });
+  await expect(pairingHeading).toBeVisible();
+
+  const pairingForm = pairingHeading.locator("xpath=..");
+  const codeInput = pairingForm.getByLabel("OLED code", { exact: true });
+  const nameInput = pairingForm.getByLabel("Device name", { exact: true });
+  const placeInput = pairingForm.getByLabel("Plant zone", { exact: true });
 
   await expect(codeInput).toBeVisible();
   await codeInput.fill(code);
   await nameInput.fill(name);
   await placeInput.fill(place);
 
-  await page
+  await pairingForm
     .getByRole("button", { name: "Pair device", exact: true })
-    .filter({ visible: true })
     .click();
-  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
 }
