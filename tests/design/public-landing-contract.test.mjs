@@ -66,10 +66,12 @@ test("removes the previous glass, ambience and theme-demo landing behavior", asy
   }
 });
 
-test("keeps login and registration routes safe during staged migration", async () => {
+test("routes the public entry points to dedicated authentication screens", async () => {
   const login = await source(loginUrl);
   const register = await source(registerUrl);
 
-  assert.match(login, /redirect\("\/auth"\)/u);
-  assert.match(register, /redirect\("\/auth"\)/u);
+  assert.match(login, /Gc2AuthScreen mode="login"/u);
+  assert.match(register, /Gc2AuthScreen mode="register"/u);
+  assert.doesNotMatch(login, /redirect\("\/auth"\)/u);
+  assert.doesNotMatch(register, /redirect\("\/auth"\)/u);
 });
