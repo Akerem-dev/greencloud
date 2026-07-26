@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import ProtectedPairingStudio from "@/components/devices/protected-pairing-studio";
 
-export default function DevicePairingCompatibilityPage() {
-  redirect("/devices");
+export default function DevicePairingPage() {
+  return <ProtectedPairingStudio />;
 }
