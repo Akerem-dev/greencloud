@@ -19,7 +19,7 @@
     "test:functions": "npm --prefix functions test",
     "test:functions-integration": "firebase emulators:exec --only database --project demo-greencloud \"npm --prefix functions run test:integration\"",
     "test:functions-callable": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"node --test --test-concurrency=1 tests/firebase/functions-callable.integration.test.mjs tests/firebase/pairing-client-flow.integration.test.mjs tests/firebase/device-unpair-callable.integration.test.mjs\"",
-    "test:device-unpair-callable": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"node --test tests/firebase/device-unpair-callable.integration.test.mjs\"",
+    "test:device-unpair-callable": "firebase emulators:exec --only auth,database,functions --project demo-greencloud \"node --test --test-concurrency=1 tests/firebase/device-unpair-callable.integration.test.mjs\"",
     "test:pairing-adapter": "node --test tests/firebase/pairing-device-adapter.test.mjs",
     "test:pairing-ui": "node --test tests/firebase/pairing-ui-contract.test.mjs",
     "test:pairing-progress": "node --test tests/firebase/pairing-progress-ui-contract.test.mjs",
