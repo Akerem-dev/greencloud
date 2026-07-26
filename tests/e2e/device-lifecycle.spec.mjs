@@ -5,6 +5,7 @@ import {
   readGreenCloud,
   seedAvailableDevice,
   seedDeviceTelemetry,
+  seedWorkspaceDevice,
   waitForGreenCloud,
 } from "./support/emulator-harness.mjs";
 import {
@@ -20,6 +21,8 @@ const DEVICE = {
   place: "E2E South Balcony",
 };
 
+const BOOTSTRAP_DEVICE_ID = "device-e2e-bootstrap";
+
 test("pairs, monitors, renames, commands and securely unpairs an ESP32", async ({
   page,
 }) => {
@@ -27,6 +30,15 @@ test("pairs, monitors, renames, commands and securely unpairs an ESP32", async (
     displayName: "Device Lifecycle User",
     email: "device-lifecycle@example.com",
   });
+
+  await seedWorkspaceDevice({
+    ownerUid: user.uid,
+    deviceId: BOOTSTRAP_DEVICE_ID,
+  });
+  await waitForGreenCloud(
+    `users/${user.uid}/devices/${BOOTSTRAP_DEVICE_ID}`,
+    (value) => value?.ownerUid === user.uid,
+  );
 
   await seedAvailableDevice(DEVICE);
   const approval = decidePendingPairing({
@@ -59,7 +71,7 @@ test("pairs, monitors, renames, commands and securely unpairs an ESP32", async (
   await expect(page.getByText("92%", { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/Updated E2E telemetry/i)).toBeVisible();
 
-  await page.getByTitle("Edit device").click();
+  await page.getByTitle("Edit device").first().click();
   await page.getByLabel("Device name").fill("E2E Renamed Mint");
   await page.getByLabel("Plant zone").fill("E2E Kitchen Window");
   await page.getByRole("button", { name: "Save changes" }).click();
@@ -76,7 +88,7 @@ test("pairs, monitors, renames, commands and securely unpairs an ESP32", async (
   );
   expect(renamedProjection.location).toBe("E2E Kitchen Window");
 
-  await page.getByRole("button", { name: "Send command", exact: true }).click();
+  await page.getByRole("button", { name: "Send command", exact: true }).first().click();
   const irrigationCommand = await waitForGreenCloud(
     `deviceCommands/${DEVICE.deviceId}`,
     (value) => value?.type === "IRRIGATE" && value?.handled === false,
@@ -93,7 +105,7 @@ test("pairs, monitors, renames, commands and securely unpairs an ESP32", async (
   });
   await expect(page.getByText("Completed", { exact: true }).first()).toBeVisible();
 
-  await page.getByTitle("Remove device").click();
+  await page.getByTitle("Remove device").first().click();
   await expect(
     page.getByRole("heading", { name: "Disconnect this device?" }),
   ).toBeVisible();
