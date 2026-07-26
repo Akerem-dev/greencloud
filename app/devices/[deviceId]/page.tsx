@@ -6,5 +6,5 @@ export default async function DeviceDetailPage({
   params: Promise<{ deviceId: string }>;
 }) {
   const { deviceId } = await params;
-  return <Gc2DeviceDetail deviceId={decodeURIComponent(deviceId)} />;
+  return <Gc2DeviceDetail deviceId={deviceId} />;
 }
