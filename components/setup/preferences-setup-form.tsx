@@ -12,7 +12,9 @@ import {
   Moon,
   Radio,
   Sparkles,
+  SunMedium,
   Wifi,
+  type LucideIcon,
 } from "lucide-react";
 
 import SetupShell from "@/components/setup/setup-shell";
@@ -32,8 +34,14 @@ const appearanceOptions: Array<{
   value: ThemePreset;
   label: string;
   description: string;
-  icon: typeof Monitor;
+  icon: LucideIcon;
 }> = [
+  {
+    value: "golden-hour",
+    label: "Warm technical",
+    description: "The current GreenCloud default with warm operational contrast.",
+    icon: SunMedium,
+  },
   {
     value: "forest-mist",
     label: "Balanced botanical",
@@ -65,7 +73,7 @@ function ChoiceCard({
   onClick: () => void;
   title: string;
   description: string;
-  icon: typeof Monitor;
+  icon: LucideIcon;
 }) {
   return (
     <button
@@ -141,7 +149,7 @@ export default function PreferencesSetupForm() {
             </p>
           </header>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          <div className="mt-5 grid gap-3 xl:grid-cols-4">
             {appearanceOptions.map((option) => (
               <ChoiceCard
                 key={option.value}
