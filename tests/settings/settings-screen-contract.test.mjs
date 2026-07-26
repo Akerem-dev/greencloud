@@ -44,10 +44,10 @@ test("keeps workspace identity inside the existing strict validation boundary", 
 
   assert.match(settings, /saveWorkspaceIdentity/u);
   assert.match(settings, /workspaceName,[\s\S]*projectName,[\s\S]*ownerName,[\s\S]*mainPlantLabel/u);
-  assert.match(settings, /label="Workspace name"[\s\S]*maxLength=\{80\}/u);
-  assert.match(settings, /label="Garden or project name"[\s\S]*maxLength=\{80\}/u);
-  assert.match(settings, /label="Workspace owner"[\s\S]*maxLength=\{60\}/u);
-  assert.match(settings, /label="Primary plant or zone"[\s\S]*maxLength=\{80\}/u);
+  assert.match(settings, /label="Workspace name"[\s\S]*?maxLength=\{80\}/u);
+  assert.match(settings, /label="Garden or project name"[\s\S]*?maxLength=\{80\}/u);
+  assert.match(settings, /label="Workspace owner"[\s\S]*?maxLength=\{60\}/u);
+  assert.match(settings, /label="Primary plant or zone"[\s\S]*?maxLength=\{80\}/u);
 });
 
 test("edits only validated interface and notification preferences", async () => {
