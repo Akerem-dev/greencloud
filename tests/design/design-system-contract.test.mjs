@@ -5,6 +5,7 @@ import test from "node:test";
 const files = {
   css: new URL("../../app/greencloud-design-system.css", import.meta.url),
   layout: new URL("../../app/layout.tsx", import.meta.url),
+  eslint: new URL("../../eslint.config.mjs", import.meta.url),
   buttons: new URL("../../components/ui/gc2-button.tsx", import.meta.url),
   fields: new URL("../../components/ui/gc2-field.tsx", import.meta.url),
   surfaces: new URL("../../components/ui/gc2-surface.tsx", import.meta.url),
@@ -113,4 +114,12 @@ test("uses native modal behavior and records anti-vibe constraints", async () =>
   assert.match(documentation, /Uniform grids of interchangeable cards are forbidden/u);
   assert.match(documentation, /decorative charts without source data/u);
   assert.match(documentation, /hidden primary actions below oversized hero regions/u);
+});
+
+test("keeps generated browser-test reports outside lint scope", async () => {
+  const eslint = await source("eslint");
+
+  assert.match(eslint, /"playwright-report\/\*\*"/u);
+  assert.match(eslint, /"test-results\/\*\*"/u);
+  assert.match(eslint, /"blob-report\/\*\*"/u);
 });
