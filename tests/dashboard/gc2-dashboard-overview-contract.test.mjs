@@ -61,7 +61,7 @@ test("derives telemetry and safety state from real device fields", async () => {
 
   assert.match(dashboard, /percentLabel\(selectedDevice\.moisture, telemetryReady\)/u);
   assert.match(dashboard, /Waiting for sensor packet/u);
-  assert.match(dashboard, /value="—"|return "—"/u);
+  assert.match(dashboard, /["']\u2014["']/u);
   assert.match(dashboard, /protectedOutput/u);
   assert.match(dashboard, /Irrigation decision boundary/u);
 });
