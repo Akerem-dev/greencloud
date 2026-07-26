@@ -9,8 +9,15 @@ const providerSource = readFileSync(
   ),
   "utf8",
 );
-const devicesSource = readFileSync(
-  new URL("../../app/devices/page.tsx", import.meta.url),
+const studioSource = readFileSync(
+  new URL(
+    "../../components/devices/protected-pairing-studio.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const routeSource = readFileSync(
+  new URL("../../app/devices/add/page.tsx", import.meta.url),
   "utf8",
 );
 
@@ -21,10 +28,11 @@ test("routes the app pairing action through the protected claim service", () => 
   assert.doesNotMatch(providerSource, /pairDeviceToUserInFirebase/);
 });
 
-test("keeps the Devices UI on the six-character approval flow", () => {
-  assert.match(devicesSource, /maxLength=\{6\}/);
-  assert.match(devicesSource, /cleanCode\.length !== 6/);
-  assert.match(devicesSource, /Approve request on ESP32/);
-  assert.match(devicesSource, /Waiting for ESP32\.\.\./);
-  assert.doesNotMatch(devicesSource, /7-character/);
+test("mounts the six-character approval flow on the dedicated add route", () => {
+  assert.match(routeSource, /ProtectedPairingStudio/);
+  assert.match(studioSource, /maxLength=\{6\}/);
+  assert.match(studioSource, /safeCode\.length !== 6/);
+  assert.match(studioSource, /Approve request on ESP32/);
+  assert.match(studioSource, /Waiting for ESP32\.\.\./);
+  assert.doesNotMatch(studioSource, /7-character/);
 });
