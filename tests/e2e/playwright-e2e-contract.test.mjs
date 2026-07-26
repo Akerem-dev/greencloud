@@ -76,35 +76,29 @@ test("models device pairing, telemetry, commands and trusted unpair", async () =
   const helpers = await source("helpers");
 
   assert.match(harness, /seedAvailableDevice/u);
+  assert.match(harness, /seedWorkspaceDevice/u);
   assert.match(harness, /decidePendingPairing/u);
   assert.match(harness, /seedDeviceTelemetry/u);
   assert.match(harness, /acknowledgeDeviceCommand/u);
   assert.match(harness, /timeoutMs:\s*30_000/u);
+  assert.match(device, /seedWorkspaceDevice\(\{/u);
   assert.match(device, /pairDeviceThroughUi\(page,\s*DEVICE\)/u);
+  assert.match(device, /deviceCardFor/u);
   assert.match(device, /deviceOwners/u);
   assert.match(device, /IRRIGATE/u);
   assert.match(device, /Device removed securely/u);
   assert.match(device, /FACTORY_RESET/u);
   assert.match(helpers, /name:\s*"Add ESP32"/u);
-  assert.match(
-    helpers,
-    /getByLabel\("OLED code",\s*\{\s*exact:\s*true\s*\}\)\.first\(\)/u,
-  );
-  assert.match(
-    helpers,
-    /locator\("button"\)\s*\.filter\(\{\s*hasText:\s*\/\^Pair device\$\/\s*\}\)/u,
-  );
-  assert.match(helpers, /expect\(pairButton\)\.toBeEnabled\(\)/u);
-  assert.match(helpers, /Object\.getOwnPropertyDescriptor\(/u);
-  assert.match(helpers, /HTMLInputElement\.prototype/u);
-  assert.match(helpers, /dispatchEvent\(new Event\("input"/u);
-  assert.match(helpers, /dispatchEvent\(new Event\("change"/u);
-  assert.match(helpers, /new MouseEvent\("click"/u);
-  assert.match(helpers, /pairingClaims\/\$\{code\}/u);
-  assert.match(helpers, /timeoutMs:\s*10_000/u);
-  assert.match(helpers, /upcoming visual redesign/u);
-  assert.doesNotMatch(helpers, /fill\(code,\s*\{\s*force:\s*true\s*\}\)/u);
-  assert.doesNotMatch(helpers, /getByRole\("button",\s*\{\s*name:\s*"Pair device"/u);
+  assert.match(helpers, /name:\s*"Pair another node\."/u);
+  assert.match(helpers, /locator\("div\.fixed\.inset-0"\)/u);
+  assert.match(helpers, /filter\(\{\s*has:\s*modalHeading\s*\}\)/u);
+  assert.match(helpers, /codeInput\.fill\(code\)/u);
+  assert.match(helpers, /nameInput\.fill\(name\)/u);
+  assert.match(helpers, /placeInput\.fill\(place\)/u);
+  assert.match(helpers, /pairButton\.click\(\)/u);
+  assert.doesNotMatch(helpers, /setControlledInputValue/u);
+  assert.doesNotMatch(helpers, /force:\s*true/u);
+  assert.doesNotMatch(helpers, /MouseEvent/u);
 });
 
 test("covers auth, settings persistence and cross-account isolation", async () => {
