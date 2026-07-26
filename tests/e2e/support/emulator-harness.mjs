@@ -138,6 +138,7 @@ export async function decidePendingPairing({
   const claim = await waitForGreenCloud(
     `pairingClaims/${normalizedCode}`,
     (value) => value?.status === "pending",
+    { timeoutMs: 30_000 },
   );
 
   if (
