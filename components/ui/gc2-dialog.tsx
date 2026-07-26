@@ -67,6 +67,8 @@ export function Gc2Dialog({
     if (event.target === event.currentTarget) onClose();
   };
 
+  if (!open) return null;
+
   return (
     <dialog
       ref={dialogRef}
