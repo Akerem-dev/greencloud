@@ -69,7 +69,10 @@ test("routes operational controls through existing protected application actions
   );
 });
 
-test("keeps future analytics navigation non-breaking during this screen batch", async () => {
+test("keeps analytics navigation active after the dedicated analytics screen ships", async () => {
   const analytics = await source("analytics");
-  assert.match(analytics, /redirect\("\/dashboard"\)/u);
+
+  assert.match(analytics, /Gc2EnvironmentalAnalytics/u);
+  assert.match(analytics, /<Gc2EnvironmentalAnalytics\s*\/>/u);
+  assert.doesNotMatch(analytics, /redirect\(/u);
 });
