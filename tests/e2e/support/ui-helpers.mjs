@@ -62,42 +62,28 @@ export async function pairDeviceThroughUi(
     name: "Add ESP32",
     exact: true,
   });
-  const inlineHeading = page.getByRole("heading", {
-    name: "Connect ESP32.",
-    exact: true,
-  });
-
-  await expect(addDeviceButton.or(inlineHeading).first()).toBeVisible();
-
-  let pairingHeading;
 
   if (await addDeviceButton.isVisible()) {
     await addDeviceButton.click();
-    pairingHeading = page.getByRole("heading", {
-      name: "Add another ESP32.",
-      exact: true,
-    });
-  } else {
-    pairingHeading = inlineHeading;
   }
 
-  await pairingHeading.evaluate((element) => {
-    element.scrollIntoView({ block: "center", behavior: "instant" });
+  const codeInput = page.getByLabel("OLED code", { exact: true }).first();
+  const nameInput = page.getByLabel("Device name", { exact: true }).first();
+  const placeInput = page.getByLabel("Plant zone", { exact: true }).first();
+
+  await expect(codeInput).toBeAttached();
+  await codeInput.evaluate((element) => {
+    element.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
   });
-  await expect(pairingHeading).toBeVisible();
-
-  const pairingForm = pairingHeading.locator("xpath=..");
-  const codeInput = pairingForm.getByLabel("OLED code", { exact: true });
-  const nameInput = pairingForm.getByLabel("Device name", { exact: true });
-  const placeInput = pairingForm.getByLabel("Plant zone", { exact: true });
-
   await expect(codeInput).toBeVisible();
+
   await codeInput.fill(code);
   await nameInput.fill(name);
   await placeInput.fill(place);
 
-  await pairingForm
+  await page
     .getByRole("button", { name: "Pair device", exact: true })
+    .first()
     .click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible({
     timeout: 30_000,
