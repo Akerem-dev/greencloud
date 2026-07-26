@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Database, Leaf, ShieldCheck } from "lucide-react";
 
@@ -17,16 +17,14 @@ export default function WorkspaceSetupForm() {
 
   const [workspaceName, setWorkspaceName] = useState(settings.workspaceName);
   const [projectName, setProjectName] = useState(settings.projectName);
-  const [ownerName, setOwnerName] = useState(settings.ownerName);
+  const [ownerName, setOwnerName] = useState(() =>
+    settings.ownerName === "Operator" && session.userName
+      ? session.userName
+      : settings.ownerName,
+  );
   const [mainPlantLabel, setMainPlantLabel] = useState(settings.mainPlantLabel);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (ownerName === "Operator" && session.userName) {
-      setOwnerName(session.userName);
-    }
-  }, [ownerName, session.userName]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
