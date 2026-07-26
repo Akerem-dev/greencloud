@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -10,6 +11,7 @@ import { firebaseAuth } from "@/lib/firebase";
 import {
   AuthSessionIntegrityError,
   normalizeAuthDisplayName,
+  normalizeAuthEmail,
   normalizeAuthLoginInput,
   normalizeAuthRegistrationInput,
 } from "@/lib/auth-session-integrity.mjs";
@@ -69,6 +71,10 @@ export function getAuthErrorMessage(error: unknown) {
 
   if (code === "auth/invalid-credential") {
     return "Email or password is incorrect.";
+  }
+
+  if (code === "auth/operation-not-allowed") {
+    return "Password recovery is not enabled for this Firebase project.";
   }
 
   if (code === "auth/too-many-requests") {
@@ -145,6 +151,28 @@ export async function loginWithEmailPassword({
   );
 
   return mapFirebaseUser(credential.user);
+}
+
+export async function requestPasswordReset(email: string) {
+  const normalizedEmail = normalizeAuthEmail(email);
+
+  try {
+    await sendPasswordResetEmail(firebaseAuth, normalizedEmail);
+  } catch (error) {
+    const code =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof error.code === "string"
+        ? error.code
+        : "";
+
+    if (code !== "auth/user-not-found") {
+      throw error;
+    }
+  }
+
+  return { email: normalizedEmail };
 }
 
 export async function updateCurrentUserDisplayName(displayName: string) {
