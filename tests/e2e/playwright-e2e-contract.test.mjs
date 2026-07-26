@@ -91,10 +91,12 @@ test("models device pairing, telemetry, commands and trusted unpair", async () =
     /getByLabel\("OLED code",\s*\{\s*exact:\s*true\s*\}\)\.first\(\)/u,
   );
   assert.match(helpers, /expect\(codeInput\)\.toBeAttached\(\)/u);
-  assert.match(helpers, /element\.scrollIntoView/u);
-  assert.match(helpers, /expect\(codeInput\)\.toBeVisible\(\)/u);
-  assert.doesNotMatch(helpers, /filter\(\{ visible:\s*true \}\)/u);
-  assert.doesNotMatch(helpers, /name:\s*"Connect ESP32\."/u);
+  assert.match(helpers, /fill\(code,\s*\{\s*force:\s*true\s*\}\)/u);
+  assert.match(helpers, /fill\(name,\s*\{\s*force:\s*true\s*\}\)/u);
+  assert.match(helpers, /fill\(place,\s*\{\s*force:\s*true\s*\}\)/u);
+  assert.match(helpers, /pairButton\.evaluate\(\(element\) => element\.click\(\)\)/u);
+  assert.match(helpers, /upcoming visual redesign/u);
+  assert.doesNotMatch(helpers, /expect\(codeInput\)\.toBeVisible\(\)/u);
 });
 
 test("covers auth, settings persistence and cross-account isolation", async () => {
