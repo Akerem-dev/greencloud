@@ -45,21 +45,34 @@ test("derives the fleet snapshot only from current AppState evidence", async () 
   assert.match(analytics, /filteredActivity,/u);
   assert.match(analytics, /searchQuery,/u);
   assert.match(analytics, /refreshTelemetry/u);
-  assert.match(analytics, /devices\.find\(\(device\) => device\.id === selectedDevice\.id\)/u);
+  assert.match(
+    analytics,
+    /devices\.find\(\s*\(device\) => device\.id === selectedDevice\.id,?\s*\)/u,
+  );
   assert.match(analytics, /telemetryDevices\.reduce/u);
-  assert.match(analytics, /device\.moisture <= automation\.moistureThreshold/u);
+  assert.match(analytics, /device\.moisture <= threshold/u);
+  assert.match(
+    analytics,
+    /moistureBand\(\s*device,\s*automation\.moistureThreshold,?\s*\)/u,
+  );
 });
 
 test("renders source-driven comparisons and explicit missing-data behavior", async () => {
   const analytics = await source("analytics");
 
-  assert.match(analytics, /style=\{\{ width: `\$\{clampPercent\(device\.moisture\)\}%` \}\}/u);
+  assert.match(
+    analytics,
+    /style=\{\{ width: `\$\{clampPercent\(device\.moisture\)\}%` \}\}/u,
+  );
   assert.match(analytics, /valuePercent\(device\.moisture, ready\)/u);
   assert.match(analytics, /valuePercent\(device\.signal, ready\)/u);
   assert.match(analytics, /return ready.*["']—["']/su);
   assert.match(analytics, /Historical trends remain unavailable/u);
   assert.match(analytics, /does not claim hourly, daily or weekly history/u);
-  assert.match(analytics, /href=\{`\/devices\/\$\{encodeURIComponent\(device\.id\)\}`\}/u);
+  assert.match(
+    analytics,
+    /href=\{`\/devices\/\$\{encodeURIComponent\(device\.id\)\}`\}/u,
+  );
 });
 
 test("does not regress analytics into fabricated charts or direct Firebase access", async () => {
