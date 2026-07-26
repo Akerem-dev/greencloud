@@ -17,7 +17,11 @@ const files = {
     "../../app/setup/preferences/page.tsx",
     import.meta.url,
   ),
-  pairingCompatibility: new URL("../../app/devices/add/page.tsx", import.meta.url),
+  pairingPage: new URL("../../app/devices/add/page.tsx", import.meta.url),
+  pairingStudio: new URL(
+    "../../components/devices/protected-pairing-studio.tsx",
+    import.meta.url,
+  ),
   authGate: new URL("../../components/auth/auth-gate.tsx", import.meta.url),
 };
 
@@ -59,11 +63,12 @@ test("persists validated workspace identity before advancing", async () => {
   assert.match(form, /Workspace setup was blocked/u);
 });
 
-test("keeps onboarding preferences essential and hands off to pairing explicitly", async () => {
-  const [page, form, pairing] = await Promise.all([
+test("keeps onboarding preferences essential and hands off to protected pairing explicitly", async () => {
+  const [page, form, pairingPage, pairingStudio] = await Promise.all([
     source("preferencesPage"),
     source("preferencesForm"),
-    source("pairingCompatibility"),
+    source("pairingPage"),
+    source("pairingStudio"),
   ]);
 
   assert.match(page, /<AuthGate>/u);
@@ -78,7 +83,12 @@ test("keeps onboarding preferences essential and hands off to pairing explicitly
   assert.match(form, /"\/devices\/add"/u);
   assert.match(form, /"\/dashboard"/u);
   assert.doesNotMatch(form, /leafAmbience|ambienceMode|fireflies/u);
-  assert.match(pairing, /redirect\("\/devices"\)/u);
+
+  assert.match(pairingPage, /ProtectedPairingStudio/u);
+  assert.match(pairingPage, /<ProtectedPairingStudio\s*\/>/u);
+  assert.match(pairingStudio, /pairDeviceByCode/u);
+  assert.match(pairingStudio, /safeCode\.length !== 6/u);
+  assert.doesNotMatch(pairingPage, /redirect\(/u);
 });
 
 test("protects setup with the migrated session gate and dedicated login route", async () => {
