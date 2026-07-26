@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -51,20 +51,15 @@ export default function Gc2AccountProfile() {
   } = useAppState();
 
   const profileName = session.userName || settings.ownerName || "Operator";
-  const accountEmail = session.email || "No authenticated email exposed";
+  const accountEmail = session.email || "";
+  const accountEmailLabel = accountEmail || "No authenticated email exposed";
 
   const [displayName, setDisplayName] = useState(profileName);
   const [savedName, setSavedName] = useState(profileName);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
-
-  useEffect(() => {
-    setDisplayName(profileName);
-    setSavedName(profileName);
-  }, [profileName]);
 
   const onlineCount = devices.filter((device) => device.status === "Online").length;
   const syncingCount = devices.filter((device) => device.status === "Syncing").length;
@@ -98,7 +93,6 @@ export default function Gc2AccountProfile() {
   }
 
   function confirmSignOut() {
-    setIsSigningOut(true);
     setSignOutOpen(false);
     logoutFromWorkspace();
   }
@@ -153,13 +147,21 @@ export default function Gc2AccountProfile() {
                 <p className="gc2-kicker">Authenticated operator</p>
                 <h2 className="gc2-heading-md mt-2">{profileName}</h2>
                 <p className="mt-2 break-all text-sm leading-6 text-[var(--gc2-ink-soft)]">
-                  {accountEmail}
+                  {accountEmailLabel}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Gc2Status tone={session.signedIn ? "success" : "danger"}>
+                    <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />
                     {session.signedIn ? "Firebase session active" : "Session unavailable"}
                   </Gc2Status>
-                  <Gc2Status tone="info">Email identity is read-only here</Gc2Status>
+                  <Gc2Status tone="info">
+                    <Mail aria-hidden="true" className="h-3.5 w-3.5" />
+                    Email identity is read-only here
+                  </Gc2Status>
+                  <Gc2Status tone={onlineCount > 0 ? "success" : "neutral"}>
+                    <Wifi aria-hidden="true" className="h-3.5 w-3.5" />
+                    {onlineCount} online
+                  </Gc2Status>
                 </div>
               </div>
             </div>
@@ -220,8 +222,9 @@ export default function Gc2AccountProfile() {
                   label="Account email"
                   value={accountEmail}
                   readOnly
-                  type="email"
+                  type={accountEmail ? "email" : "text"}
                   autoComplete="email"
+                  placeholder="No authenticated email exposed"
                   hint="GreenCloud does not expose an email-change operation in the current account adapter."
                 />
               </div>
@@ -315,7 +318,7 @@ export default function Gc2AccountProfile() {
 
             <Gc2Surface className="p-5">
               <div className="flex items-start gap-3">
-                <ShieldCheck aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-[var(--gc2-success)]" />
+                <Cpu aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-[var(--gc2-success)]" />
                 <div className="min-w-0">
                   <p className="m-0 text-sm font-bold text-[var(--gc2-ink)]">
                     Private workspace scope
@@ -346,13 +349,9 @@ export default function Gc2AccountProfile() {
                 <Gc2Button variant="quiet" onClick={() => setSignOutOpen(false)}>
                   Keep session
                 </Gc2Button>
-                <Gc2Button
-                  variant="danger"
-                  onClick={confirmSignOut}
-                  disabled={isSigningOut}
-                >
+                <Gc2Button variant="danger" onClick={confirmSignOut}>
                   <LogOut aria-hidden="true" className="h-4 w-4" />
-                  {isSigningOut ? "Signing out..." : "Confirm sign out"}
+                  Confirm sign out
                 </Gc2Button>
               </>
             }
