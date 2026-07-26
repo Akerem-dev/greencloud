@@ -3,29 +3,6 @@ import { getUserByEmail, waitForGreenCloud } from "./emulator-harness.mjs";
 
 export const E2E_PASSWORD = "Test123456!";
 
-async function setControlledInputValue(locator, value) {
-  await locator.evaluate((element, nextValue) => {
-    if (!(element instanceof HTMLInputElement)) {
-      throw new Error("Expected an HTML input element.");
-    }
-
-    const valueSetter = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value",
-    )?.set;
-
-    if (!valueSetter) {
-      throw new Error("HTML input value setter is unavailable.");
-    }
-
-    valueSetter.call(element, nextValue);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  }, value);
-
-  await expect(locator).toHaveValue(value);
-}
-
 export async function registerUser(
   page,
   {
@@ -85,42 +62,34 @@ export async function pairDeviceThroughUi(
     name: "Add ESP32",
     exact: true,
   });
+  await expect(addDeviceButton).toBeVisible();
+  await addDeviceButton.click();
 
-  if (await addDeviceButton.isVisible()) {
-    await addDeviceButton.click();
-  }
-
-  const codeInput = page.getByLabel("OLED code", { exact: true }).first();
-  const nameInput = page.getByLabel("Device name", { exact: true }).first();
-  const placeInput = page.getByLabel("Plant zone", { exact: true }).first();
-  const pairButton = page
-    .locator("button")
-    .filter({ hasText: /^Pair device$/ })
-    .first();
-
-  await expect(codeInput).toBeAttached();
-  await expect(nameInput).toBeAttached();
-  await expect(placeInput).toBeAttached();
-  await expect(pairButton).toBeAttached();
-  await expect(pairButton).toBeEnabled();
-
-  // The current visual shell clips the first-device pairing card below the
-  // desktop viewport. Keep the functional E2E chain running against the real
-  // React handlers while the pairing UX is intentionally deferred to the
-  // upcoming visual redesign.
-  await setControlledInputValue(codeInput, code);
-  await setControlledInputValue(nameInput, name);
-  await setControlledInputValue(placeInput, place);
-
-  await pairButton.evaluate((element) => {
-    element.dispatchEvent(
-      new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-      }),
-    );
+  const modalHeading = page.getByRole("heading", {
+    name: "Pair another node.",
+    exact: true,
   });
+  await expect(modalHeading).toBeVisible();
+
+  const pairingModal = page
+    .locator("div.fixed.inset-0")
+    .filter({ has: modalHeading })
+    .first();
+  await expect(pairingModal).toBeVisible();
+
+  const codeInput = pairingModal.getByLabel("OLED code", { exact: true });
+  const nameInput = pairingModal.getByLabel("Device name", { exact: true });
+  const placeInput = pairingModal.getByLabel("Plant zone", { exact: true });
+  const pairButton = pairingModal.getByRole("button", {
+    name: "Pair device",
+    exact: true,
+  });
+
+  await codeInput.fill(code);
+  await nameInput.fill(name);
+  await placeInput.fill(place);
+  await expect(pairButton).toBeEnabled();
+  await pairButton.click();
 
   await waitForGreenCloud(
     `pairingClaims/${code}`,
