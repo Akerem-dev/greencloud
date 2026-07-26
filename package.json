@@ -13,6 +13,7 @@
     "test:public-landing": "node --test tests/design/public-landing-contract.test.mjs",
     "test:auth-screens": "node --test tests/auth/auth-screens-ui-contract.test.mjs",
     "test:setup-screens": "node --test tests/design/setup-screens-contract.test.mjs",
+    "test:dashboard-screen": "node --test tests/dashboard/dashboard-overview-contract.test.mjs tests/dashboard/live-operations-ui-contract.test.mjs tests/dashboard/workspace-pulse-ui-contract.test.mjs",
     "test:firebase-rules": "firebase emulators:exec --only database --project demo-greencloud \"node --test --test-concurrency=1 tests/firebase/database.rules.test.mjs tests/firebase/pairing.rules.test.mjs tests/firebase/pairing-claim.rules.test.mjs tests/firebase/device-unpair-command.rules.test.mjs\"",
     "test:functions": "npm --prefix functions test",
     "test:functions-integration": "firebase emulators:exec --only database --project demo-greencloud \"npm --prefix functions run test:integration\"",
