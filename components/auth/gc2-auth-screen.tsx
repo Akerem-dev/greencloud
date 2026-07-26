@@ -126,7 +126,7 @@ export default function Gc2AuthScreen({ mode }: { mode: AuthMode }) {
     return subscribeToAuthState(
       (user) => {
         if (user) {
-          router.replace("/dashboard");
+          router.replace(screen.successRoute);
           return;
         }
 
@@ -137,7 +137,7 @@ export default function Gc2AuthScreen({ mode }: { mode: AuthMode }) {
         setErrorMessage("Firebase session checking failed. Check the connection and try again.");
       },
     );
-  }, [router]);
+  }, [router, screen.successRoute]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
