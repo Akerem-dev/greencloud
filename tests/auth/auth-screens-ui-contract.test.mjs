@@ -77,7 +77,7 @@ test("removes the previous combined glass auth presentation", async () => {
   }
 });
 
-test("keeps compatibility redirects explicit while activating workspace setup", async () => {
+test("keeps legacy auth compatibility explicit while activating setup and recovery", async () => {
   const [legacy, recover, setup] = await Promise.all([
     source("legacy"),
     source("recover"),
@@ -85,7 +85,9 @@ test("keeps compatibility redirects explicit while activating workspace setup", 
   ]);
 
   assert.match(legacy, /redirect\("\/login"\)/u);
-  assert.match(recover, /redirect\("\/login"\)/u);
+  assert.match(recover, /Gc2RecoveryScreen/u);
+  assert.match(recover, /<Gc2RecoveryScreen\s*\/>/u);
+  assert.doesNotMatch(recover, /redirect\(/u);
   assert.match(setup, /<AuthGate>/u);
   assert.match(setup, /<WorkspaceSetupForm/u);
   assert.doesNotMatch(setup, /redirect\(/u);
