@@ -128,6 +128,47 @@ export async function seedAvailableDevice({
   };
 }
 
+export async function seedWorkspaceDevice({
+  ownerUid,
+  deviceId = "device-e2e-bootstrap",
+  name = "E2E Existing Node",
+  place = "E2E Fixture Zone",
+} = {}) {
+  if (!ownerUid) {
+    throw new Error("ownerUid is required for the E2E workspace device.");
+  }
+
+  const nowMs = Date.now();
+  const projection = {
+    id: deviceId,
+    deviceId,
+    ownerUid,
+    name,
+    place,
+    location: place,
+    status: "Idle",
+    moisture: 0,
+    signal: 0,
+    safeMode: true,
+    pumpEnabled: false,
+    sensorStatus: "Pending",
+    firmware: "greencloud-esp32-bootstrap",
+    updatedAt: "E2E bootstrap fixture",
+    lastSeenMs: nowMs,
+  };
+
+  await greenCloudRoot.update({
+    [`deviceOwners/${deviceId}`]: {
+      ownerUid,
+      pairedAtMs: nowMs,
+    },
+    [`users/${ownerUid}/devices/${deviceId}`]: projection,
+    [`deviceData/${deviceId}`]: projection,
+  });
+
+  return projection;
+}
+
 export async function decidePendingPairing({
   code = "ABC123",
   deviceAuthUid = "device-auth-e2e-a",
