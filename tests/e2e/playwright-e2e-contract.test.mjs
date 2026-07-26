@@ -86,11 +86,12 @@ test("models device pairing, telemetry, commands and trusted unpair", async () =
   assert.match(device, /Device removed securely/u);
   assert.match(device, /FACTORY_RESET/u);
   assert.match(helpers, /name:\s*"Add ESP32"/u);
-  assert.match(helpers, /document\.scrollingElement/u);
-  assert.match(helpers, /scrollTo\(0,\s*scroller\.scrollHeight\)/u);
-  assert.match(helpers, /filter\(\{ visible:\s*true \}\)/u);
+  assert.match(helpers, /name:\s*"Connect ESP32\."/u);
+  assert.match(helpers, /name:\s*"Add another ESP32\."/u);
+  assert.match(helpers, /pairingHeading\.locator\("xpath=\.\."\)/u);
+  assert.match(helpers, /element\.scrollIntoView/u);
   assert.match(helpers, /expect\(codeInput\)\.toBeVisible\(\)/u);
-  assert.doesNotMatch(helpers, /scrollIntoViewIfNeeded\(\)/u);
+  assert.doesNotMatch(helpers, /filter\(\{ visible:\s*true \}\)/u);
 });
 
 test("covers auth, settings persistence and cross-account isolation", async () => {
