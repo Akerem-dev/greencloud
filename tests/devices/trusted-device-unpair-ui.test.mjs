@@ -124,12 +124,19 @@ test("rejects invalid client configuration before invoking Firebase", async () =
   );
 });
 
-test("connects the final Devices confirmation to loading-safe trusted removal", () => {
+test("connects the GC-09 confirmation to loading-safe trusted removal", () => {
   const boundary = readFileSync(
     path.join(root, "components/devices/device-mutation-boundary.tsx"),
     "utf8",
   );
-  const page = readFileSync(path.join(root, "app/devices/page.tsx"), "utf8");
+  const detail = readFileSync(
+    path.join(root, "components/devices/gc2-device-detail.tsx"),
+    "utf8",
+  );
+  const dialog = readFileSync(
+    path.join(root, "components/ui/gc2-dialog.tsx"),
+    "utf8",
+  );
 
   assert.match(boundary, /unpairDeviceWithTrustedCallable/);
   assert.match(boundary, /button\.title === "Remove device"/);
@@ -143,7 +150,11 @@ test("connects the final Devices confirmation to loading-safe trusted removal", 
   assert.match(boundary, /factory-reset command was queued/);
   assert.match(boundary, /backdrop\.click\(\)/);
 
-  assert.match(page, /removeDevice\(deleteTarget\.id\)/);
-  assert.match(page, /removed from workspace/);
+  assert.match(detail, /removeDevice\(deleteTarget\.id\)/);
+  assert.match(detail, /removed from workspace/);
+  assert.match(detail, /title="Copy device ID"/);
+  assert.match(detail, /title="Remove device"/);
+  assert.match(detail, /closeLabel="Close delete confirmation"/);
+  assert.match(dialog, /if \(!open\) return null/);
   assert.doesNotMatch(boundary, /removeDevice\(deleteTarget\.id\)/);
 });

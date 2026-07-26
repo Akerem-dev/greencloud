@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function AuthCompatibilityPage() {
+export default function RecoverCompatibilityPage() {
   redirect("/login");
 }

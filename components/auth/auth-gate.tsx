@@ -2,30 +2,53 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Lock, ShieldCheck } from "lucide-react";
-import BrandMark from "@/components/shared/brand-mark";
-import GlassCard from "@/components/shared/glass-card";
+import { LockKeyhole, ShieldCheck } from "lucide-react";
+
+import { Gc2Surface } from "@/components/ui/gc2-surface";
 import {
   getCurrentGreenCloudUser,
   subscribeToAuthState,
   type GreenCloudAuthUser,
 } from "@/lib/firebase-auth";
 
+const publicAuthPaths = new Set(["/auth", "/login", "/register", "/recover"]);
+
 type AuthGateProps = {
   children: ReactNode;
 };
 
+function SessionStateCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <main className="gc2-page grid min-h-screen place-items-center px-4 py-10">
+      <Gc2Surface tone="raised" className="w-full max-w-[480px] p-6 text-center sm:p-8">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-[var(--gc2-radius-md)] border border-[var(--gc2-line)] bg-[var(--gc2-canvas-muted)] text-[var(--gc2-moss-strong)]">
+          {icon}
+        </div>
+        <p className="gc2-kicker mt-6">GreenCloud secure session</p>
+        <h1 className="gc2-heading-md mt-3">{title}</h1>
+        <p className="gc2-copy mt-3">{description}</p>
+      </Gc2Surface>
+    </main>
+  );
+}
+
 export default function AuthGate({ children }: AuthGateProps) {
   const router = useRouter();
   const pathname = usePathname();
-
-  const isAuthPage = pathname === "/auth";
+  const isPublicAuthPath = publicAuthPaths.has(pathname);
 
   const [user, setUser] = useState<GreenCloudAuthUser | null>(() =>
     getCurrentGreenCloudUser(),
   );
-
-  const [isChecking, setIsChecking] = useState(() => pathname !== "/auth");
+  const [isChecking, setIsChecking] = useState(() => !isPublicAuthPath);
 
   useEffect(() => {
     const fallbackTimer = window.setTimeout(() => {
@@ -35,27 +58,25 @@ export default function AuthGate({ children }: AuthGateProps) {
     const unsubscribe = subscribeToAuthState(
       (nextUser) => {
         window.clearTimeout(fallbackTimer);
-
         setUser(nextUser);
         setIsChecking(false);
 
-        if (nextUser && pathname === "/auth") {
+        if (nextUser && isPublicAuthPath) {
           router.replace("/dashboard");
           return;
         }
 
-        if (!nextUser && pathname !== "/auth") {
-          router.replace("/auth");
+        if (!nextUser && !isPublicAuthPath) {
+          router.replace("/login");
         }
       },
       () => {
         window.clearTimeout(fallbackTimer);
-
         setUser(null);
         setIsChecking(false);
 
-        if (pathname !== "/auth") {
-          router.replace("/auth");
+        if (!isPublicAuthPath) {
+          router.replace("/login");
         }
       },
     );
@@ -64,54 +85,25 @@ export default function AuthGate({ children }: AuthGateProps) {
       window.clearTimeout(fallbackTimer);
       unsubscribe();
     };
-  }, [pathname, router]);
+  }, [isPublicAuthPath, router]);
 
-  if (isChecking && !isAuthPage) {
+  if (isChecking && !isPublicAuthPath) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center bg-[var(--gc-bg)] px-4 text-[var(--gc-text)]">
-        <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--gc-accent)_16%,transparent),transparent_30%),linear-gradient(180deg,var(--gc-bg-2),var(--gc-bg))]" />
-
-        <GlassCard className="w-full max-w-[460px] p-7 text-center">
-          <div className="flex justify-center">
-            <BrandMark title="GreenCloud" subtitle="Secure session" compact />
-          </div>
-
-          <div className="mx-auto mt-8 flex h-16 w-16 items-center justify-center rounded-[24px] border border-[color-mix(in_srgb,var(--gc-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--gc-accent)_12%,transparent)] shadow-[0_0_34px_var(--gc-glow)]">
-            <ShieldCheck className="h-7 w-7 text-[var(--gc-accent-2)]" />
-          </div>
-
-          <h1 className="mt-7 text-3xl font-semibold tracking-[-0.06em]">
-            Checking secure session...
-          </h1>
-
-          <p className="mt-3 text-sm leading-6 text-[var(--gc-soft)]">
-            GreenCloud is verifying your Firebase Authentication session before
-            opening the private workspace.
-          </p>
-        </GlassCard>
-      </main>
+      <SessionStateCard
+        icon={<ShieldCheck aria-hidden="true" className="h-5 w-5" />}
+        title="Checking secure session..."
+        description="GreenCloud is verifying the Firebase Authentication session before opening private workspace data."
+      />
     );
   }
 
-  if (!user && !isAuthPage) {
+  if (!user && !isPublicAuthPath) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center bg-[var(--gc-bg)] px-4 text-[var(--gc-text)]">
-        <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--gc-accent)_16%,transparent),transparent_30%),linear-gradient(180deg,var(--gc-bg-2),var(--gc-bg))]" />
-
-        <GlassCard className="w-full max-w-[460px] p-7 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] border border-[color-mix(in_srgb,var(--gc-danger)_32%,transparent)] bg-[color-mix(in_srgb,var(--gc-danger)_12%,transparent)]">
-            <Lock className="h-7 w-7 text-[var(--gc-text)]" />
-          </div>
-
-          <h1 className="mt-7 text-3xl font-semibold tracking-[-0.06em]">
-            Login required.
-          </h1>
-
-          <p className="mt-3 text-sm leading-6 text-[var(--gc-soft)]">
-            Redirecting to the GreenCloud authentication page.
-          </p>
-        </GlassCard>
-      </main>
+      <SessionStateCard
+        icon={<LockKeyhole aria-hidden="true" className="h-5 w-5" />}
+        title="Sign in required."
+        description="Redirecting to the dedicated GreenCloud login screen. No private workspace action is available without authentication."
+      />
     );
   }
 

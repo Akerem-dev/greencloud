@@ -7,36 +7,40 @@ const layoutSource = readFileSync(
   "utf8",
 );
 
-const pulseSource = readFileSync(
-  new URL(
-    "../../components/dashboard/workspace-pulse-portal.tsx",
-    import.meta.url,
-  ),
+const dashboardSource = readFileSync(
+  new URL("../../components/dashboard/gc2-dashboard-overview.tsx", import.meta.url),
   "utf8",
 );
 
-test("mounts the workspace pulse beside dashboard live operations", () => {
-  assert.match(layoutSource, /WorkspacePulsePortal/);
-  assert.match(layoutSource, /<WorkspacePulsePortal\s*\/>/);
-  assert.match(layoutSource, /<LiveOperationsDeck\s*\/>/);
+const shellSource = readFileSync(
+  new URL("../../components/layout/gc2-protected-shell.tsx", import.meta.url),
+  "utf8",
+);
+
+test("keeps the Dashboard layout free of injected portals and duplicate decks", () => {
+  assert.match(layoutSource, /return children/);
+  assert.doesNotMatch(layoutSource, /WorkspacePulsePortal/);
+  assert.doesNotMatch(layoutSource, /LiveOperationsDeck/);
+  assert.doesNotMatch(layoutSource, /createPortal/);
 });
 
-test("projects a state-driven workspace pulse into the dashboard", () => {
-  assert.match(pulseSource, /useAppState/);
-  assert.match(pulseSource, /createPortal/);
-  assert.match(pulseSource, /\.dashboard-page/);
-  assert.match(pulseSource, /Workspace pulse/);
-  assert.match(pulseSource, /Soil moisture/);
-  assert.match(pulseSource, /Connectivity/);
-  assert.match(pulseSource, /Protection/);
+test("projects one state-driven workspace pulse into the overview", () => {
+  assert.match(dashboardSource, /useAppState/);
+  assert.match(dashboardSource, /Workspace pulse/);
+  assert.match(dashboardSource, /Current field state/);
+  assert.match(dashboardSource, /Device roster/);
+  assert.match(dashboardSource, /Recent operations/);
+  assert.match(dashboardSource, /Live system path/);
+  assert.match(dashboardSource, /No fabricated plant state/);
 });
 
-test("keeps workspace pulse actions inside the existing app state boundary", () => {
-  assert.match(pulseSource, /refreshTelemetry/);
-  assert.match(pulseSource, /href="\/devices"/);
-  assert.match(pulseSource, /href="\/activity"/);
-  assert.doesNotMatch(pulseSource, /realtimeDatabase/);
-  assert.doesNotMatch(pulseSource, /firebaseAuth/);
-  assert.doesNotMatch(pulseSource, /firebaseFunctions/);
-  assert.doesNotMatch(pulseSource, /httpsCallable/);
+test("uses the shared protected shell and keeps actions inside AppState", () => {
+  assert.match(shellSource, /Gc2AppShell/);
+  assert.match(shellSource, /AuthGate/);
+  assert.match(shellSource, /href="\/activity"/);
+  assert.match(shellSource, /href="\/profile"/);
+  assert.match(dashboardSource, /href="\/devices"/);
+  assert.match(dashboardSource, /href="\/activity"/);
+  assert.doesNotMatch(dashboardSource, /firebaseAuth/);
+  assert.doesNotMatch(dashboardSource, /httpsCallable/);
 });

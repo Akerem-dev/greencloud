@@ -170,7 +170,7 @@ test("mounts visible capture-phase protection on the Devices route", () => {
     "utf8",
   );
 
-  assert.match(layout, /DevicesPairingExperience/);
+  assert.doesNotMatch(layout, /DevicesPairingExperience/);
   assert.match(layout, /DeviceMutationBoundary/);
   assert.match(boundary, /document\.addEventListener\("click", handleClickCapture, true\)/);
   assert.match(boundary, /label === "Remove device"/);

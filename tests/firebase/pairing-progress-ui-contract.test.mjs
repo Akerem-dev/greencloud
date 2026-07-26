@@ -10,24 +10,20 @@ const studioSource = readFileSync(
   "utf8",
 );
 
+const routeSource = readFileSync(
+  new URL("../../app/devices/add/page.tsx", import.meta.url),
+  "utf8",
+);
+
 const layoutSource = readFileSync(
   new URL("../../app/devices/layout.tsx", import.meta.url),
   "utf8",
 );
 
-const experienceSource = readFileSync(
-  new URL(
-    "../../components/devices/devices-pairing-experience.tsx",
-    import.meta.url,
-  ),
-  "utf8",
-);
-
-test("mounts the protected pairing studio on the Devices route", () => {
-  assert.match(layoutSource, /DevicesPairingExperience/);
-  assert.match(layoutSource, /<DevicesPairingExperience>/);
-  assert.match(experienceSource, /ProtectedPairingStudio/);
-  assert.match(experienceSource, /<ProtectedPairingStudio\s*\/>/);
+test("mounts the protected pairing studio only on the add-device route", () => {
+  assert.match(routeSource, /ProtectedPairingStudio/);
+  assert.match(routeSource, /<ProtectedPairingStudio\s*\/>/);
+  assert.doesNotMatch(layoutSource, /ProtectedPairingStudio|DevicesPairingExperience/);
 });
 
 test("shows the four visible protected pairing trust steps", () => {

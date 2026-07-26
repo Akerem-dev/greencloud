@@ -3,33 +3,38 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const layoutPath = new URL("../../app/devices/layout.tsx", import.meta.url);
-const experiencePath = new URL(
-  "../../components/devices/devices-pairing-experience.tsx",
+const indexPath = new URL(
+  "../../components/devices/gc2-devices-index.tsx",
   import.meta.url,
 );
+const pairingPath = new URL(
+  "../../components/devices/protected-pairing-studio.tsx",
+  import.meta.url,
+);
+const addRoutePath = new URL("../../app/devices/add/page.tsx", import.meta.url);
 
-const [layoutSource, experienceSource] = await Promise.all([
+const [layoutSource, indexSource, pairingSource, addRouteSource] = await Promise.all([
   readFile(layoutPath, "utf8"),
-  readFile(experiencePath, "utf8"),
+  readFile(indexPath, "utf8"),
+  readFile(pairingPath, "utf8"),
+  readFile(addRoutePath, "utf8"),
 ]);
 
-test("routes the Devices page through the single protected pairing experience", () => {
-  assert.match(layoutSource, /DevicesPairingExperience/);
-  assert.doesNotMatch(layoutSource, /ProtectedPairingStudio/);
-  assert.match(experienceSource, /<ProtectedPairingStudio \/>/);
+test("keeps one deliberate protected pairing entry route", () => {
+  assert.match(indexSource, /href="\/devices\/add"/);
+  assert.match(addRouteSource, /ProtectedPairingStudio/);
+  assert.doesNotMatch(layoutSource, /ProtectedPairingStudio|DevicesPairingExperience/);
 });
 
-test("hides the legacy inline pairing surfaces and header action", () => {
-  assert.match(experienceSource, /data-devices-pairing-experience/);
-  assert.match(experienceSource, /input\[placeholder="ABC123"\]\[maxlength="6"\]/);
-  assert.match(experienceSource, /\.lucide-key-round/);
-  assert.match(experienceSource, /> :first-child\s+button\.premium-btn/);
-  assert.match(experienceSource, /display: none !important/);
+test("keeps pairing controls out of the inventory screen", () => {
+  assert.doesNotMatch(indexSource, /pairDeviceByCode/);
+  assert.doesNotMatch(indexSource, /placeholder="ABC123"/);
+  assert.doesNotMatch(indexSource, /maxLength=\{6\}/);
+  assert.match(pairingSource, /placeholder="ABC123"/);
+  assert.match(pairingSource, /maxLength=\{6\}/);
 });
 
-test("redirects the legacy Add ESP32 action to Secure pairing", () => {
-  assert.match(experienceSource, /LEGACY_ADD_BUTTON_LABEL = "Add ESP32"/);
-  assert.match(experienceSource, /STUDIO_LAUNCHER_COPY = "Secure pairing"/);
-  assert.match(experienceSource, /handleLegacyPairingClick/);
-  assert.match(experienceSource, /findButtonByCopy\(STUDIO_LAUNCHER_COPY\)\?\.click\(\)/);
+test("does not restore the legacy floating pairing launcher", () => {
+  assert.doesNotMatch(pairingSource, /fixed bottom-|Secure pairing|handleLegacyPairingClick/);
+  assert.doesNotMatch(layoutSource, /data-devices-pairing-experience/);
 });
