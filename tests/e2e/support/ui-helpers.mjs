@@ -3,6 +3,29 @@ import { getUserByEmail, waitForGreenCloud } from "./emulator-harness.mjs";
 
 export const E2E_PASSWORD = "Test123456!";
 
+async function setControlledInputValue(locator, value) {
+  await locator.evaluate((element, nextValue) => {
+    if (!(element instanceof HTMLInputElement)) {
+      throw new Error("Expected an HTML input element.");
+    }
+
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )?.set;
+
+    if (!valueSetter) {
+      throw new Error("HTML input value setter is unavailable.");
+    }
+
+    valueSetter.call(element, nextValue);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+
+  await expect(locator).toHaveValue(value);
+}
+
 export async function registerUser(
   page,
   {
@@ -79,15 +102,33 @@ export async function pairDeviceThroughUi(
   await expect(nameInput).toBeAttached();
   await expect(placeInput).toBeAttached();
   await expect(pairButton).toBeAttached();
+  await expect(pairButton).toBeEnabled();
 
   // The current visual shell clips the first-device pairing card below the
   // desktop viewport. Keep the functional E2E chain running against the real
   // React handlers while the pairing UX is intentionally deferred to the
   // upcoming visual redesign.
-  await codeInput.fill(code, { force: true });
-  await nameInput.fill(name, { force: true });
-  await placeInput.fill(place, { force: true });
-  await pairButton.evaluate((element) => element.click());
+  await setControlledInputValue(codeInput, code);
+  await setControlledInputValue(nameInput, name);
+  await setControlledInputValue(placeInput, place);
+
+  await pairButton.evaluate((element) => {
+    element.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      }),
+    );
+  });
+
+  await waitForGreenCloud(
+    `pairingClaims/${code}`,
+    (value) =>
+      Boolean(value?.requestedByUid) &&
+      (value?.status === "pending" || value?.status === "approved"),
+    { timeoutMs: 10_000 },
+  );
 
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible({
     timeout: 30_000,
