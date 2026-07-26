@@ -77,7 +77,7 @@ test("removes the previous combined glass auth presentation", async () => {
   }
 });
 
-test("keeps staged compatibility routes explicit and non-cyclic", async () => {
+test("keeps compatibility redirects explicit while activating workspace setup", async () => {
   const [legacy, recover, setup] = await Promise.all([
     source("legacy"),
     source("recover"),
@@ -86,5 +86,7 @@ test("keeps staged compatibility routes explicit and non-cyclic", async () => {
 
   assert.match(legacy, /redirect\("\/login"\)/u);
   assert.match(recover, /redirect\("\/login"\)/u);
-  assert.match(setup, /redirect\("\/dashboard"\)/u);
+  assert.match(setup, /<AuthGate>/u);
+  assert.match(setup, /<WorkspaceSetupForm/u);
+  assert.doesNotMatch(setup, /redirect\(/u);
 });
