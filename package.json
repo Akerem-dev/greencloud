@@ -17,6 +17,7 @@
     "test:device-screens": "node --test tests/devices/device-screens-contract.test.mjs tests/firebase/pairing-ui-contract.test.mjs tests/firebase/pairing-progress-ui-contract.test.mjs tests/firebase/pairing-single-entry-ui-contract.test.mjs tests/devices/device-mutation-safety.test.mjs tests/devices/trusted-device-unpair-ui.test.mjs",
     "test:activity-screen": "node --test tests/activity/operations-timeline-ui-contract.test.mjs",
     "test:automation-screen": "node --test tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
+    "test:analytics-screen": "node --test tests/analytics/analytics-screen-contract.test.mjs",
     "test:firebase-rules": "firebase emulators:exec --only database --project demo-greencloud \"node --test --test-concurrency=1 tests/firebase/database.rules.test.mjs tests/firebase/pairing.rules.test.mjs tests/firebase/pairing-claim.rules.test.mjs tests/firebase/device-unpair-command.rules.test.mjs\"",
     "test:functions": "npm --prefix functions test",
     "test:functions-integration": "firebase emulators:exec --only database --project demo-greencloud \"npm --prefix functions run test:integration\"",
