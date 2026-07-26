@@ -55,12 +55,71 @@ npm run dev
 
 Leaving the target undefined during development is treated as a configuration error.
 
+## Full browser regression
+
+Install the Chromium test browser once:
+
+```bash
+npm run test:e2e:install
+```
+
+Run the complete browser suite:
+
+```bash
+npm run test:e2e
+```
+
+The command starts Auth, Realtime Database and Functions emulators with `firebase emulators:exec`, starts Next.js through the fail-closed isolated launcher, runs Playwright with one worker and shuts the stack down when the suite finishes.
+
+Current browser coverage includes:
+
+- protected-route redirects
+- registration, sign-out, login and session refresh
+- invalid registration without account creation
+- ESP32 pairing-code publication and device approval
+- canonical ownership and private workspace projection
+- live telemetry rendering
+- device rename persistence
+- irrigation command creation and device acknowledgement
+- trusted unpair and queued factory reset
+- theme, notification, ambience and compact-mode persistence
+- profile and workspace identity persistence
+- cross-account device isolation
+
+Failure artifacts are written locally to:
+
+- `playwright-report/`
+- `test-results/playwright-results.json`
+- Playwright screenshots, video and traces under `test-results/`
+
+Open the last HTML report with:
+
+```bash
+npm run test:e2e:report
+```
+
+Focused browser commands:
+
+```bash
+npm run test:e2e:auth
+npm run test:e2e:device
+npm run test:e2e:headed
+```
+
+Physical ESP32 pins, sensors, relay, pump and electrical behavior are outside browser emulation and require a later hardware-in-the-loop suite.
+
 ## Verification
 
 Focused emulator-isolation contract:
 
 ```bash
 npm run test:firebase-emulator-isolation
+```
+
+Playwright architecture contract, which does not require a browser download:
+
+```bash
+npm run test:e2e-contract
 ```
 
 Complete security chain:
