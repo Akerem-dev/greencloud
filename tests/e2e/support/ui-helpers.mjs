@@ -71,7 +71,8 @@ export async function pairDeviceThroughUi(
   const nameInput = page.getByLabel("Device name", { exact: true }).first();
   const placeInput = page.getByLabel("Plant zone", { exact: true }).first();
   const pairButton = page
-    .getByRole("button", { name: "Pair device", exact: true })
+    .locator("button")
+    .filter({ hasText: /^Pair device$/ })
     .first();
 
   await expect(codeInput).toBeAttached();
