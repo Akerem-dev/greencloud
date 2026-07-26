@@ -62,22 +62,35 @@ export async function pairDeviceThroughUi(
 
   if (await addDeviceButton.isVisible()) {
     await addDeviceButton.click();
+  } else {
+    await page.evaluate(() => {
+      const scroller = document.scrollingElement ?? document.documentElement;
+      scroller.scrollTo(0, scroller.scrollHeight);
+    });
+    await page.waitForTimeout(250);
   }
 
-  const codeInput = page.getByLabel("OLED code", { exact: true });
-  const nameInput = page.getByLabel("Device name", { exact: true });
-  const placeInput = page.getByLabel("Plant zone", { exact: true });
+  const codeInput = page
+    .getByLabel("OLED code", { exact: true })
+    .filter({ visible: true })
+    .first();
+  const nameInput = page
+    .getByLabel("Device name", { exact: true })
+    .filter({ visible: true })
+    .first();
+  const placeInput = page
+    .getByLabel("Plant zone", { exact: true })
+    .filter({ visible: true })
+    .first();
 
-  await codeInput.scrollIntoViewIfNeeded();
   await expect(codeInput).toBeVisible();
   await codeInput.fill(code);
-
-  await nameInput.scrollIntoViewIfNeeded();
   await nameInput.fill(name);
-
-  await placeInput.scrollIntoViewIfNeeded();
   await placeInput.fill(place);
 
-  await page.getByRole("button", { name: "Pair device", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Pair device", exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
