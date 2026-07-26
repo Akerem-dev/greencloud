@@ -58,7 +58,10 @@ test("keeps operations inside the existing AppState boundary", () => {
   }
 
   assert.match(activitySource, /disabled=\{!hasRealDevice\}/);
-  assert.match(activitySource, /GreenCloud does not fabricate placeholder history/);
+  assert.match(
+    activitySource,
+    /GreenCloud does not fabricate\s+placeholder history/su,
+  );
   assert.doesNotMatch(
     activitySource,
     /realtimeDatabase|firebaseFunctions|firebaseAuth|writeIrrigationCommandToFirebase|Math\.random/u,
