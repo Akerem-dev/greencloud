@@ -4,6 +4,7 @@ import Script from "next/script";
 import AuthSessionSafetyBoundary from "@/components/auth/auth-session-safety-boundary";
 import { AppStateProvider } from "@/components/providers/app-state-provider";
 import "./globals.css";
+import "./greencloud-design-system.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -108,6 +109,7 @@ export default function RootLayout({
       data-compact="false"
       data-motion="on"
       data-ambience="rain"
+      data-design-system="greencloud-2"
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
