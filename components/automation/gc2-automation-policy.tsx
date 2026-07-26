@@ -37,7 +37,6 @@ import {
   Gc2Surface,
 } from "@/components/ui/gc2-surface";
 
-
 type AutomationDevice = Device & {
   sensorStatus?: string;
   safeMode?: boolean;
@@ -50,7 +49,6 @@ type AutomationDevice = Device & {
   lastSeenMs?: number;
   lastCommand?: string;
   lastCommandStatus?: string;
-  firmware?: string;
 };
 
 function hasTelemetry(device: AutomationDevice) {
@@ -63,47 +61,11 @@ function hasTelemetry(device: AutomationDevice) {
 }
 
 function statusTone(value: string): Gc2StatusTone {
-  const normalized = value.toLowerCase();
-
-  if (
-    normalized.includes("ready") ||
-    normalized.includes("clear") ||
-    normalized.includes("online") ||
-    normalized.includes("completed") ||
-    normalized.includes("enabled") ||
-    normalized.includes("met")
-  ) {
-    return "success";
-  }
-
-  if (
-    normalized.includes("blocked") ||
-    normalized.includes("offline") ||
-    normalized.includes("empty") ||
-    normalized.includes("no signal")
-  ) {
-    return "danger";
-  }
-
-  if (
-    normalized.includes("low") ||
-    normalized.includes("detected") ||
-    normalized.includes("waiting") ||
-    normalized.includes("review") ||
-    normalized.includes("paused")
-  ) {
-    return "warning";
-  }
-
-  if (
-    normalized.includes("protected") ||
-    normalized.includes("locked") ||
-    normalized.includes("monitoring") ||
-    normalized.includes("manual")
-  ) {
-    return "info";
-  }
-
+  const text = value.toLowerCase();
+  if (/ready|clear|online|completed|enabled|met/u.test(text)) return "success";
+  if (/blocked|offline|empty|no signal/u.test(text)) return "danger";
+  if (/low|detected|waiting|review|paused/u.test(text)) return "warning";
+  if (/protected|locked|monitoring|manual/u.test(text)) return "info";
   return "neutral";
 }
 
@@ -144,7 +106,6 @@ function PolicyRange({
           {suffix}
         </span>
       </div>
-
       <input
         type="range"
         min={min}
@@ -154,16 +115,9 @@ function PolicyRange({
         onChange={(event) => onChange(Number(event.target.value))}
         className="mt-4 h-2 w-full cursor-pointer accent-[var(--gc2-moss)]"
       />
-
       <div className="gc2-data mt-2 flex justify-between text-[10px] text-[var(--gc2-ink-muted)]">
-        <span>
-          {min}
-          {suffix}
-        </span>
-        <span>
-          {max}
-          {suffix}
-        </span>
+        <span>{min}{suffix}</span>
+        <span>{max}{suffix}</span>
       </div>
     </div>
   );
@@ -241,9 +195,8 @@ export default function Gc2AutomationPolicy() {
   const [resetOpen, setResetOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
 
-  const activeDevice =
-    devices.find((device) => device.id === selectedDevice.id) ?? devices[0];
-  const device = activeDevice as AutomationDevice | undefined;
+  const device = (devices.find((item) => item.id === selectedDevice.id) ??
+    devices[0]) as AutomationDevice | undefined;
 
   if (!device) {
     return (
@@ -266,9 +219,8 @@ export default function Gc2AutomationPolicy() {
               title="No selected hardware node"
               icon={<ShieldCheck className="h-5 w-5" />}
             >
-              The automation editor remains inactive until a real workspace device
-              exists. GreenCloud does not create placeholder policies for imaginary
-              hardware.
+              The editor remains inactive until a real workspace device exists.
+              GreenCloud does not create placeholder policies for imaginary hardware.
             </Gc2Notice>
           </Gc2Surface>
         </div>
@@ -277,8 +229,8 @@ export default function Gc2AutomationPolicy() {
   }
 
   const telemetryReady = hasTelemetry(device);
-  const sensorStatus = device.sensorStatus ??
-    (device.status === "Offline" ? "No signal" : "Pending");
+  const sensorStatus =
+    device.sensorStatus ?? (device.status === "Offline" ? "No signal" : "Pending");
   const rainStatus = device.rainStatus ?? "Pending";
   const waterStatus = device.waterLevelStatus ?? "Pending";
   const safeMode = device.safeMode ?? true;
@@ -327,6 +279,7 @@ export default function Gc2AutomationPolicy() {
   }
 
   function sendProtectedCommand() {
+    if (!device) return;
     startIrrigation(device.id);
     setFeedback(
       "Command submitted to the existing AppState safety boundary for evaluation.",
@@ -339,7 +292,7 @@ export default function Gc2AutomationPolicy() {
         <Gc2SectionHeading
           kicker={`${device.name} · ${device.place}`}
           title="Automation is a policy, not a shortcut."
-          description="Define the moisture rule, timing constraints and command permissions while keeping sensor, rain, tank and physical-output protection visible."
+          description="Define moisture rules, timing constraints and command permissions while keeping sensor, rain, tank and physical-output protection visible."
           actions={
             <>
               <Gc2LinkButton
@@ -380,7 +333,6 @@ export default function Gc2AutomationPolicy() {
                   : "All visible web-side guards currently allow the configured policy to continue."}
               </p>
             </div>
-
             <div className="grid gap-5 sm:grid-cols-2">
               <Gc2Metric
                 label="Soil moisture"
@@ -390,7 +342,7 @@ export default function Gc2AutomationPolicy() {
               <Gc2Metric
                 label="Mode"
                 value={automation.mode}
-                detail={automaticArmed ? "Automatic policy armed" : "Controlled policy state"}
+                detail={automaticArmed ? "Automatic policy armed" : "Controlled state"}
               />
               <Gc2Metric
                 label="Cooldown"
@@ -415,11 +367,9 @@ export default function Gc2AutomationPolicy() {
                   Rule and timing controls
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--gc2-ink-soft)]">
-                  Every change passes through the existing normalized automation
-                  adapter before persistence.
+                  Every change passes through the existing normalized automation adapter.
                 </p>
               </div>
-
               <div className="p-5 sm:p-6">
                 <div className="grid gap-3 border-b border-[var(--gc2-line)] pb-5 sm:grid-cols-2">
                   <Gc2Button
@@ -439,39 +389,32 @@ export default function Gc2AutomationPolicy() {
                     Manual policy
                   </Gc2Button>
                 </div>
-
                 <PolicyRange
                   label="Moisture threshold"
-                  description="Marks the selected node as eligible when real soil moisture reaches or falls below this value."
+                  description="Marks the node as eligible when real moisture reaches or falls below this value."
                   value={automation.moistureThreshold}
                   min={15}
                   max={80}
                   suffix="%"
-                  onChange={(value) =>
-                    updateAutomation({ moistureThreshold: value })
-                  }
+                  onChange={(value) => updateAutomation({ moistureThreshold: value })}
                 />
                 <PolicyRange
                   label="Cooldown window"
-                  description="Prevents repeated watering requests from being issued too close together."
+                  description="Prevents repeated requests from being issued too close together."
                   value={automation.cooldownMinutes}
                   min={5}
                   max={120}
                   suffix=" min"
-                  onChange={(value) =>
-                    updateAutomation({ cooldownMinutes: value })
-                  }
+                  onChange={(value) => updateAutomation({ cooldownMinutes: value })}
                 />
                 <PolicyRange
                   label="Requested pump duration"
-                  description="Controls the requested runtime; firmware and hardware protection remain authoritative."
+                  description="Controls requested runtime; firmware and hardware protection remain authoritative."
                   value={automation.pumpDurationSeconds}
                   min={2}
                   max={60}
                   suffix="s"
-                  onChange={(value) =>
-                    updateAutomation({ pumpDurationSeconds: value })
-                  }
+                  onChange={(value) => updateAutomation({ pumpDurationSeconds: value })}
                 />
               </div>
             </Gc2Surface>
@@ -486,7 +429,7 @@ export default function Gc2AutomationPolicy() {
               <div className="p-5 sm:p-6">
                 <PolicyToggle
                   title="Automatic irrigation"
-                  description="Allows the automatic policy to request watering after every visible guard passes."
+                  description="Allows automatic requests only after every visible guard passes."
                   active={automation.autoIrrigationEnabled}
                   onClick={() =>
                     updateAutomation({
@@ -496,7 +439,7 @@ export default function Gc2AutomationPolicy() {
                 />
                 <PolicyToggle
                   title="Manual override"
-                  description="Allows protected manual requests from dashboard, device detail and this policy page."
+                  description="Allows protected requests from dashboard, detail and this page."
                   active={automation.manualOverrideEnabled}
                   onClick={() => {
                     const next = !automation.manualOverrideEnabled;
@@ -508,7 +451,7 @@ export default function Gc2AutomationPolicy() {
                 />
                 <PolicyToggle
                   title="Quiet hours"
-                  description="Adds a configured overnight boundary to the automatic policy."
+                  description="Adds an overnight boundary to the automatic policy."
                   active={automation.quietHoursEnabled}
                   onClick={() =>
                     updateAutomation({
@@ -516,7 +459,6 @@ export default function Gc2AutomationPolicy() {
                     })
                   }
                 />
-
                 {automation.quietHoursEnabled ? (
                   <div className="mt-5 grid gap-5 border-t border-[var(--gc2-line)] pt-5 sm:grid-cols-2">
                     <Gc2Input
@@ -605,8 +547,7 @@ export default function Gc2AutomationPolicy() {
                 Evaluate a manual request
               </h2>
               <p className="mt-2 text-sm leading-6 text-[var(--gc2-ink-soft)]">
-                This button does not bypass blockers. It routes through the existing
-                AppState command decision and visible safety boundary.
+                This does not bypass blockers. It uses the existing AppState command decision.
               </p>
               <Gc2Button
                 onClick={sendProtectedCommand}
@@ -618,9 +559,7 @@ export default function Gc2AutomationPolicy() {
               <div className="mt-5 border-t border-[var(--gc2-line)] pt-4">
                 <p className="gc2-kicker">Last command</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Gc2Status
-                    tone={statusTone(device.lastCommandStatus ?? "None")}
-                  >
+                  <Gc2Status tone={statusTone(device.lastCommandStatus ?? "None")}>
                     {device.lastCommandStatus ?? "None"}
                   </Gc2Status>
                   <span className="text-xs text-[var(--gc2-ink-soft)]">
@@ -644,8 +583,7 @@ export default function Gc2AutomationPolicy() {
                 title="Visible guards are clear"
                 icon={<ShieldCheck className="h-5 w-5" />}
               >
-                The web-side policy is ready. Firmware and physical safety still
-                remain authoritative for output execution.
+                Firmware and physical safety remain authoritative for execution.
               </Gc2Notice>
             )}
 
@@ -662,7 +600,7 @@ export default function Gc2AutomationPolicy() {
               <div className="mt-4 flex items-start gap-3 border-t border-[var(--gc2-line)] pt-4">
                 <TimerReset className="mt-0.5 h-5 w-5 text-[var(--gc2-moss)]" />
                 <p className="m-0 text-sm leading-6 text-[var(--gc2-ink-soft)]">
-                  Every successful request must respect a {automation.cooldownMinutes}-minute cooldown.
+                  Successful requests respect a {automation.cooldownMinutes}-minute cooldown.
                 </p>
               </div>
             </Gc2Surface>
@@ -675,7 +613,7 @@ export default function Gc2AutomationPolicy() {
           open
           onClose={() => setResetOpen(false)}
           title="Reset automation policy"
-          description="Restore the existing protected defaults for mode, threshold, cooldown, runtime and quiet hours."
+          description="Restore protected defaults for mode, threshold, cooldown, runtime and quiet hours."
           footer={
             <>
               <Gc2Button variant="quiet" onClick={() => setResetOpen(false)}>
@@ -692,8 +630,7 @@ export default function Gc2AutomationPolicy() {
             title="Current policy values will be replaced"
             icon={<RotateCcw className="h-5 w-5" />}
           >
-            Device ownership, telemetry and activity history are not changed by
-            this reset.
+            Device ownership, telemetry and activity history are unchanged.
           </Gc2Notice>
         </Gc2Dialog>
       ) : null}
