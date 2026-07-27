@@ -10,6 +10,14 @@ const studioSource = readFileSync(
   "utf8",
 );
 
+const waitingSource = readFileSync(
+  new URL(
+    "../../components/devices/gc2-pairing-approval-wait.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const routeSource = readFileSync(
   new URL("../../app/devices/add/page.tsx", import.meta.url),
   "utf8",
@@ -31,7 +39,8 @@ test("shows the four visible protected pairing trust steps", () => {
   assert.match(studioSource, /Secure claim/);
   assert.match(studioSource, /ESP32 approval/);
   assert.match(studioSource, /Workspace/);
-  assert.match(studioSource, /Waiting for ESP32 approval/);
+  assert.match(studioSource, /Gc2PairingApprovalWait/);
+  assert.match(waitingSource, /Waiting for ESP32 approval/);
 });
 
 test("routes the visual studio through the protected app pairing action", () => {

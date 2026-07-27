@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import Gc2EnvironmentalAnalytics from "@/components/analytics/gc2-environmental-analytics";
 
-export default function AnalyticsCompatibilityPage() {
-  redirect("/dashboard");
+export default function AnalyticsPage() {
+  return <Gc2EnvironmentalAnalytics />;
 }

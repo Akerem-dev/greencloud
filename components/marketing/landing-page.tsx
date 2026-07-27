@@ -2,14 +2,11 @@ import {
   Activity,
   ArrowRight,
   CheckCircle2,
-  CloudRain,
-  Cpu,
   Droplets,
   Gauge,
   Lock,
   Radio,
   ShieldCheck,
-  Waves,
   Wifi,
 } from "lucide-react";
 

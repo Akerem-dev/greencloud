@@ -121,6 +121,9 @@ test("routes Firebase Auth SDK calls through normalized runtime input", async ()
   assert.match(source, /displayName: normalized\.displayName/u);
   assert.match(source, /normalizeAuthLoginInput\(/u);
   assert.match(source, /normalizeAuthDisplayName\(displayName\)/u);
+  assert.match(source, /requestPasswordReset\(email: string\)/u);
+  assert.match(source, /normalizeAuthEmail\(email\)/u);
+  assert.match(source, /sendPasswordResetEmail\(firebaseAuth, normalizedEmail\)/u);
   assert.match(source, /error instanceof AuthSessionIntegrityError/u);
   assert.doesNotMatch(source, /const cleanDisplayName = displayName\?\.trim/u);
 });
