@@ -22,7 +22,6 @@ import {
 import { Gc2Button, Gc2LinkButton } from "@/components/ui/gc2-button";
 import { Gc2Notice, Gc2Status } from "@/components/ui/gc2-status";
 import {
-  Gc2Metric,
   Gc2SectionHeading,
   Gc2Surface,
 } from "@/components/ui/gc2-surface";
