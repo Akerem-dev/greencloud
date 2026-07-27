@@ -58,7 +58,10 @@ test("keeps account discovery private and avoids fake recovery claims", async ()
     /label="Account email"[\s\S]*?maxLength=\{254\}/u,
   );
   assert.doesNotMatch(recovery, /label="Password"|new-password|current-password/u);
-  assert.doesNotMatch(recovery, /account exists for|No account was found/u);
+  assert.doesNotMatch(
+    recovery,
+    /No account was found|Account confirmed|Registered account found/u,
+  );
 });
 
 test("keeps Firebase SDK access and legacy glass presentation out of the screen", async () => {
