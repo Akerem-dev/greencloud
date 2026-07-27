@@ -20,6 +20,7 @@
     "test:pairing-failure": "node --test tests/devices/pairing-failure-screen-contract.test.mjs tests/devices/pairing-awaiting-screen-contract.test.mjs tests/firebase/pairing-progress-ui-contract.test.mjs tests/firebase/pairing-ui-contract.test.mjs",
     "test:offline-sync": "node --test tests/devices/offline-sync-recovery-screen-contract.test.mjs tests/devices/device-screens-contract.test.mjs tests/firebase/firebase-connection-state-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:hardware-lockout": "node --test tests/safety/hardware-safety-lockout-contract.test.mjs tests/dashboard/dashboard-overview-contract.test.mjs tests/devices/device-screens-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
+    "test:notification-drawer": "node --test tests/overlays/notification-center-drawer-contract.test.mjs tests/design/design-system-contract.test.mjs",
     "test:activity-screen": "node --test tests/activity/operations-timeline-ui-contract.test.mjs",
     "test:automation-screen": "node --test tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:analytics-screen": "node --test tests/analytics/analytics-screen-contract.test.mjs",
