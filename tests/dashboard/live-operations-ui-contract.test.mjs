@@ -7,25 +7,45 @@ const dashboardSource = readFileSync(
   "utf8",
 );
 
+const emptySource = readFileSync(
+  new URL("../../components/dashboard/gc2-empty-workspace.tsx", import.meta.url),
+  "utf8",
+);
+
+const routeSource = readFileSync(
+  new URL("../../components/dashboard/gc2-dashboard-route.tsx", import.meta.url),
+  "utf8",
+);
+
 const pageSource = readFileSync(
   new URL("../../app/dashboard/page.tsx", import.meta.url),
   "utf8",
 );
 
-test("mounts one unified operations overview on the Dashboard route", () => {
-  assert.match(pageSource, /Gc2DashboardOverview/);
-  assert.match(pageSource, /<Gc2DashboardOverview\s*\/>/);
+test("mounts live operations behind the dashboard state boundary", () => {
+  assert.match(pageSource, /Gc2DashboardRoute/);
+  assert.match(pageSource, /<Gc2DashboardRoute\s*\/>/);
+  assert.match(routeSource, /Gc2DashboardOverview/);
+  assert.match(routeSource, /Gc2EmptyWorkspace/);
+  assert.match(routeSource, /isBootLoading \|\| hasRealDevice/);
   assert.doesNotMatch(pageSource, /GlassCard/);
   assert.doesNotMatch(pageSource, /AppShell/);
 });
 
-test("shows the visible live operations and safety command surface", () => {
+test("shows live operations only on the real-device dashboard", () => {
   assert.match(dashboardSource, /Current field state/);
   assert.match(dashboardSource, /Soil moisture/);
   assert.match(dashboardSource, /Safety matrix/);
   assert.match(dashboardSource, /Protected irrigation command/);
   assert.match(dashboardSource, /Wi-Fi signal/);
   assert.match(dashboardSource, /Test threshold/);
+
+  assert.match(emptySource, /First-device readiness/);
+  assert.match(emptySource, /Pump and relay commands remain unavailable/);
+  assert.doesNotMatch(
+    emptySource,
+    /startIrrigation|refreshTelemetry|simulateThresholdEvent/,
+  );
 });
 
 test("routes dashboard operations through the existing protected app actions", () => {
