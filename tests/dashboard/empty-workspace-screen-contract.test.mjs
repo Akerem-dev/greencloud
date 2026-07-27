@@ -18,7 +18,7 @@ async function source(name) {
   return readFile(files[name], "utf8");
 }
 
-test("routes dashboard boot, empty and live-device states explicitly", async () => {
+test("routes dashboard boot, empty, hardware-lockout and live-device states explicitly", async () => {
   const [page, route] = await Promise.all([
     source("page"),
     source("route"),
@@ -28,8 +28,21 @@ test("routes dashboard boot, empty and live-device states explicitly", async () 
   assert.match(page, /<Gc2DashboardRoute\s*\/>/u);
   assert.match(route, /Gc2DashboardOverview/u);
   assert.match(route, /Gc2EmptyWorkspace/u);
-  assert.match(route, /isBootLoading \|\| hasRealDevice/u);
+  assert.match(route, /Gc2HardwareSafetyLockout/u);
   assert.match(route, /selectedDevice\.id !== "device-waiting"/u);
+  assert.match(route, /if \(isBootLoading\)/u);
+  assert.match(route, /if \(!hasRealDevice\)/u);
+  assert.match(route, /if \(hardwareLockout\.locked\)/u);
+
+  const loadingIndex = route.indexOf("if (isBootLoading)");
+  const emptyIndex = route.indexOf("if (!hasRealDevice)");
+  const lockoutIndex = route.indexOf("if (hardwareLockout.locked)");
+  const liveIndex = route.lastIndexOf("return <Gc2DashboardOverview />");
+
+  assert.ok(loadingIndex >= 0);
+  assert.ok(emptyIndex > loadingIndex);
+  assert.ok(lockoutIndex > emptyIndex);
+  assert.ok(liveIndex > lockoutIndex);
 });
 
 test("builds a complete first-device readiness screen without fake telemetry", async () => {
