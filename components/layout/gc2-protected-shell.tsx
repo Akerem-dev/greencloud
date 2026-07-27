@@ -20,6 +20,7 @@ import AuthGate from "@/components/auth/auth-gate";
 import { Gc2AppShell } from "@/components/layout/gc2-shells";
 import Gc2NotificationCenterDrawer from "@/components/notifications/gc2-notification-center-drawer";
 import { useAppState } from "@/components/providers/app-state-provider";
+import Gc2GlobalCommandPalette from "@/components/search/gc2-global-command-palette";
 import { Gc2Button } from "@/components/ui/gc2-button";
 import { Gc2Status } from "@/components/ui/gc2-status";
 
@@ -89,6 +90,8 @@ export default function Gc2ProtectedShell({ children }: { children: ReactNode })
                 </span>
                 <span className="sm:hidden">{connected ? "Live" : "Offline"}</span>
               </Gc2Status>
+
+              <Gc2GlobalCommandPalette />
 
               <Gc2Button
                 variant="quiet"
