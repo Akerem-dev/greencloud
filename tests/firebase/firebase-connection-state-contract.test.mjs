@@ -11,9 +11,10 @@ test("uses narrowed emulator details and the initialized app for production", as
   const source = await readFile(sourceUrl, "utf8");
 
   assert.match(source, /if \(firebaseRuntimeConfig\.useEmulators\)/u);
-  assert.match(
-    source,
-    /firebaseRuntimeConfig\.host}:\$\{firebaseRuntimeConfig\.databasePort/u,
+  assert.ok(
+    source.includes(
+      "`${firebaseRuntimeConfig.host}:${firebaseRuntimeConfig.databasePort}`",
+    ),
   );
   assert.match(source, /firebaseApp\.options\.projectId/u);
   assert.doesNotMatch(
