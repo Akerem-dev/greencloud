@@ -2,6 +2,7 @@
 
 import Gc2DeviceDetail from "@/components/devices/gc2-device-detail";
 import Gc2OfflineSyncRecovery from "@/components/devices/gc2-offline-sync-recovery";
+import Gc2RenameDeviceModal from "@/components/devices/gc2-rename-device-modal";
 import { useAppState } from "@/components/providers/app-state-provider";
 import Gc2HardwareSafetyLockout from "@/components/safety/gc2-hardware-safety-lockout";
 import { getHardwareSafetyLockout } from "@/lib/hardware-safety-lockout.mjs";
@@ -29,5 +30,10 @@ export default function Gc2DeviceDetailRoute({
     return <Gc2HardwareSafetyLockout device={device} surface="device" />;
   }
 
-  return <Gc2DeviceDetail deviceId={deviceId} />;
+  return (
+    <>
+      <Gc2DeviceDetail deviceId={deviceId} />
+      <Gc2RenameDeviceModal deviceId={deviceId} />
+    </>
+  );
 }
