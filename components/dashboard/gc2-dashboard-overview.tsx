@@ -3,18 +3,12 @@
 import {
   Activity,
   ArrowRight,
-  CloudRain,
   Cpu,
   Droplets,
-  Gauge,
   Leaf,
-  Lock,
-  Power,
   RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
-  Thermometer,
-  Waves,
   Wifi,
   Zap,
 } from "lucide-react";
