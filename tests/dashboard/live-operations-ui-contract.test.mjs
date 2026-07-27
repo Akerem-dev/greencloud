@@ -27,7 +27,20 @@ test("mounts live operations behind the dashboard state boundary", () => {
   assert.match(pageSource, /<Gc2DashboardRoute\s*\/>/);
   assert.match(routeSource, /Gc2DashboardOverview/);
   assert.match(routeSource, /Gc2EmptyWorkspace/);
-  assert.match(routeSource, /isBootLoading \|\| hasRealDevice/);
+  assert.match(routeSource, /Gc2HardwareSafetyLockout/);
+  assert.match(routeSource, /if \(isBootLoading\)/);
+  assert.match(routeSource, /if \(!hasRealDevice\)/);
+  assert.match(routeSource, /if \(hardwareLockout\.locked\)/);
+
+  const loadingIndex = routeSource.indexOf("if (isBootLoading)");
+  const emptyIndex = routeSource.indexOf("if (!hasRealDevice)");
+  const lockoutIndex = routeSource.indexOf("if (hardwareLockout.locked)");
+  const liveIndex = routeSource.lastIndexOf("return <Gc2DashboardOverview />");
+
+  assert.ok(loadingIndex >= 0);
+  assert.ok(emptyIndex > loadingIndex);
+  assert.ok(lockoutIndex > emptyIndex);
+  assert.ok(liveIndex > lockoutIndex);
   assert.doesNotMatch(pageSource, /GlassCard/);
   assert.doesNotMatch(pageSource, /AppShell/);
 });
