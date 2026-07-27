@@ -4,8 +4,16 @@ import test from "node:test";
 
 const files = {
   page: new URL("../../app/dashboard/page.tsx", import.meta.url),
+  route: new URL(
+    "../../components/dashboard/gc2-dashboard-route.tsx",
+    import.meta.url,
+  ),
   dashboard: new URL(
     "../../components/dashboard/gc2-dashboard-overview.tsx",
+    import.meta.url,
+  ),
+  empty: new URL(
+    "../../components/dashboard/gc2-empty-workspace.tsx",
     import.meta.url,
   ),
   shell: new URL("../../components/layout/gc2-protected-shell.tsx", import.meta.url),
@@ -15,15 +23,20 @@ async function source(name) {
   return readFile(files[name], "utf8");
 }
 
-test("mounts the GC-06 overview through the protected GreenCloud shell", async () => {
-  const [page, dashboard, shell] = await Promise.all([
+test("mounts GC-06 and GC-16 through one protected dashboard boundary", async () => {
+  const [page, route, dashboard, empty, shell] = await Promise.all([
     source("page"),
+    source("route"),
     source("dashboard"),
+    source("empty"),
     source("shell"),
   ]);
 
-  assert.match(page, /Gc2DashboardOverview/u);
+  assert.match(page, /Gc2DashboardRoute/u);
+  assert.match(route, /Gc2DashboardOverview/u);
+  assert.match(route, /Gc2EmptyWorkspace/u);
   assert.match(dashboard, /Gc2ProtectedShell/u);
+  assert.match(empty, /Gc2ProtectedShell/u);
   assert.match(shell, /Gc2AppShell/u);
   assert.match(shell, /AuthGate/u);
   assert.match(shell, /Overview.*\/dashboard/su);
@@ -33,14 +46,14 @@ test("mounts the GC-06 overview through the protected GreenCloud shell", async (
 });
 
 test("keeps empty workspaces honest and routes users to pairing", async () => {
-  const dashboard = await source("dashboard");
+  const empty = await source("empty");
 
-  assert.match(dashboard, /Empty workspace/u);
-  assert.match(dashboard, /Pair the first ESP32 before monitoring begins/u);
-  assert.match(dashboard, /rather than inventing telemetry/u);
-  assert.match(dashboard, /href="\/devices\/add"/u);
-  assert.match(dashboard, /No fabricated plant state/u);
-  assert.match(dashboard, /Moisture, signal and watering controls remain unavailable/u);
+  assert.match(empty, /First-device readiness/u);
+  assert.match(empty, /Pair before the workspace starts telling a plant story/u);
+  assert.match(empty, /deliberately blank instead of filling the interface with demonstration values/u);
+  assert.match(empty, /href="\/devices\/add"/u);
+  assert.match(empty, /No device packet has been accepted yet/u);
+  assert.match(empty, /Pump and relay commands remain unavailable/u);
 });
 
 test("derives telemetry and safety state from real device fields", async () => {
@@ -61,7 +74,7 @@ test("derives telemetry and safety state from real device fields", async () => {
 
   assert.match(dashboard, /percentLabel\(selectedDevice\.moisture, telemetryReady\)/u);
   assert.match(dashboard, /Waiting for sensor packet/u);
-  assert.match(dashboard, /["']\u2014["']/u);
+  assert.match(dashboard, /["']—["']/u);
   assert.match(dashboard, /protectedOutput/u);
   assert.match(dashboard, /Irrigation decision boundary/u);
 });
@@ -92,7 +105,10 @@ test("represents the live system and operations as topology, table and ledger", 
 });
 
 test("does not regress to generic glass dashboard presentation", async () => {
-  const dashboard = await source("dashboard");
+  const [dashboard, empty] = await Promise.all([
+    source("dashboard"),
+    source("empty"),
+  ]);
 
   for (const forbidden of [
     "GlassCard",
@@ -103,7 +119,7 @@ test("does not regress to generic glass dashboard presentation", async () => {
     "grid-cols-4 gap-4 KPI",
   ]) {
     assert.doesNotMatch(
-      dashboard,
+      `${dashboard}\n${empty}`,
       new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"),
     );
   }
