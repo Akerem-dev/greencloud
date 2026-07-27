@@ -32,10 +32,10 @@ test("mounts one accessible global palette in the protected topbar", async () =>
   assert.match(palette, /aria-label="Open global search and command palette"/u);
   assert.match(palette, /aria-haspopup="dialog"/u);
   assert.match(palette, /aria-expanded=\{quickPanelOpen\}/u);
-  assert.match(palette, /onClick=\{openQuickPanel\}/u);
+  assert.match(palette, /onClick=\{openPalette\}/u);
   assert.match(palette, /Gc2Dialog/u);
   assert.match(palette, /open=\{quickPanelOpen\}/u);
-  assert.match(palette, /onClose=\{closeQuickPanel\}/u);
+  assert.match(palette, /onClose=\{closePalette\}/u);
 });
 
 test("opens and closes through the existing quick-panel state and keyboard shortcut", async () => {
@@ -47,7 +47,8 @@ test("opens and closes through the existing quick-panel state and keyboard short
   assert.match(palette, /event\.metaKey \|\| event\.ctrlKey/u);
   assert.match(palette, /event\.key\.toLowerCase\(\) === "k"/u);
   assert.match(palette, /event\.preventDefault\(\)/u);
-  assert.match(palette, /toggleQuickPanel\(\)/u);
+  assert.match(palette, /if \(quickPanelOpen\)[\s\S]*closePalette\(\)[\s\S]*openPalette\(\)/u);
+  assert.match(palette, /setQuery\(""\)/u);
   assert.match(palette, /window\.addEventListener\("keydown", handleShortcut\)/u);
   assert.match(provider, /quickPanelOpen: boolean/u);
   assert.match(provider, /openQuickPanel: \(\) => void/u);
