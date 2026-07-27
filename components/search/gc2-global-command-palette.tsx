@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -127,28 +128,39 @@ export default function Gc2GlobalCommandPalette() {
     quickPanelOpen,
     openQuickPanel,
     closeQuickPanel,
-    toggleQuickPanel,
     selectDevice,
     updateSearchQuery,
   } = useAppState();
+
+  const openPalette = useCallback(() => {
+    setQuery("");
+    openQuickPanel();
+  }, [openQuickPanel]);
+
+  const closePalette = useCallback(() => {
+    setQuery("");
+    closeQuickPanel();
+  }, [closeQuickPanel]);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        toggleQuickPanel();
+
+        if (quickPanelOpen) {
+          closePalette();
+        } else {
+          openPalette();
+        }
       }
     };
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [toggleQuickPanel]);
+  }, [closePalette, openPalette, quickPanelOpen]);
 
   useEffect(() => {
-    if (!quickPanelOpen) {
-      setQuery("");
-      return;
-    }
+    if (!quickPanelOpen) return;
 
     const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
     return () => window.cancelAnimationFrame(frame);
@@ -210,7 +222,7 @@ export default function Gc2GlobalCommandPalette() {
       updateSearchQuery("");
     }
 
-    closeQuickPanel();
+    closePalette();
     router.push(item.href);
   };
 
@@ -219,7 +231,7 @@ export default function Gc2GlobalCommandPalette() {
     if (!safeQuery) return;
 
     updateSearchQuery(safeQuery);
-    closeQuickPanel();
+    closePalette();
     router.push("/activity");
   };
 
@@ -230,7 +242,7 @@ export default function Gc2GlobalCommandPalette() {
         aria-label="Open global search and command palette"
         aria-haspopup="dialog"
         aria-expanded={quickPanelOpen}
-        onClick={openQuickPanel}
+        onClick={openPalette}
         className="hidden gap-2 sm:inline-flex"
       >
         <Search aria-hidden="true" className="h-4 w-4" />
@@ -242,7 +254,7 @@ export default function Gc2GlobalCommandPalette() {
 
       <Gc2Dialog
         open={quickPanelOpen}
-        onClose={closeQuickPanel}
+        onClose={closePalette}
         title="Global search"
         description="Navigate the protected workspace, open a trusted device or search stored activity evidence. Hardware commands are not available in this palette."
         closeLabel="Close global search"
