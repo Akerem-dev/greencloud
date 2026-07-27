@@ -16,6 +16,10 @@ const files = {
     "../../components/dashboard/gc2-empty-workspace.tsx",
     import.meta.url,
   ),
+  safety: new URL(
+    "../../components/safety/gc2-hardware-safety-lockout.tsx",
+    import.meta.url,
+  ),
   shell: new URL("../../components/layout/gc2-protected-shell.tsx", import.meta.url),
   analytics: new URL("../../app/analytics/page.tsx", import.meta.url),
 };
@@ -25,28 +29,33 @@ async function source(name) {
 }
 
 test("mounts one protected GreenCloud dashboard state boundary", async () => {
-  const [page, route, dashboard, empty, shell] = await Promise.all([
+  const [page, route, dashboard, empty, safety, shell] = await Promise.all([
     source("page"),
     source("route"),
     source("dashboard"),
     source("empty"),
+    source("safety"),
     source("shell"),
   ]);
 
   assert.match(page, /Gc2DashboardRoute/u);
   assert.match(route, /Gc2DashboardOverview/u);
   assert.match(route, /Gc2EmptyWorkspace/u);
+  assert.match(route, /Gc2HardwareSafetyLockout/u);
+  assert.match(route, /getHardwareSafetyLockout/u);
   assert.match(dashboard, /Gc2ProtectedShell/u);
   assert.match(empty, /Gc2ProtectedShell/u);
+  assert.match(safety, /Gc2ProtectedShell/u);
   assert.match(shell, /Gc2AppShell/u);
   assert.match(shell, /AuthGate/u);
   assert.doesNotMatch(page, /GlassCard|AmbientOrbs|LeafFallOverlay/u);
 });
 
 test("shows real field, safety, device and empty-workspace state without fabricated telemetry", async () => {
-  const [dashboard, empty] = await Promise.all([
+  const [dashboard, empty, safety] = await Promise.all([
     source("dashboard"),
     source("empty"),
+    source("safety"),
   ]);
 
   for (const term of [
@@ -67,17 +76,28 @@ test("shows real field, safety, device and empty-workspace state without fabrica
     assert.match(empty, new RegExp(term, "u"));
   }
 
+  for (const term of [
+    "Hardware protection has locked irrigation output",
+    "Active incident register",
+    "Output-safe, field inspection required",
+  ]) {
+    assert.match(safety, new RegExp(term, "u"));
+  }
+
   assert.match(dashboard, /telemetryReady/u);
   assert.match(dashboard, /hasTelemetry/u);
   assert.match(dashboard, /selectedDevice/u);
   assert.doesNotMatch(
-    `${dashboard}\n${empty}`,
+    `${dashboard}\n${empty}\n${safety}`,
     /Math\.random|chartPattern|recharts|fakeTelemetry/u,
   );
 });
 
 test("routes operational controls through existing protected application actions", async () => {
-  const dashboard = await source("dashboard");
+  const [dashboard, safety] = await Promise.all([
+    source("dashboard"),
+    source("safety"),
+  ]);
 
   for (const action of [
     "startIrrigation",
@@ -88,8 +108,10 @@ test("routes operational controls through existing protected application actions
     assert.match(dashboard, new RegExp(action, "u"));
   }
 
+  assert.match(safety, /refreshTelemetry\(device\.id\)/u);
+  assert.doesNotMatch(safety, /startIrrigation|simulateThresholdEvent/u);
   assert.doesNotMatch(
-    dashboard,
+    `${dashboard}\n${safety}`,
     /firebaseAuth|realtimeDatabase|firebaseFunctions|httpsCallable/u,
   );
 });
