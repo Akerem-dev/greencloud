@@ -17,6 +17,10 @@ const files = {
     import.meta.url,
   ),
   detail: new URL("../../components/devices/gc2-device-detail.tsx", import.meta.url),
+  safety: new URL(
+    "../../components/safety/gc2-hardware-safety-lockout.tsx",
+    import.meta.url,
+  ),
   layout: new URL("../../app/devices/layout.tsx", import.meta.url),
 };
 
@@ -25,7 +29,17 @@ async function source(name) {
 }
 
 test("mounts three deliberate protected device routes", async () => {
-  const [indexPage, index, addPage, pairing, detailPage, detailRoute, detail, layout] = await Promise.all([
+  const [
+    indexPage,
+    index,
+    addPage,
+    pairing,
+    detailPage,
+    detailRoute,
+    detail,
+    safety,
+    layout,
+  ] = await Promise.all([
     source("indexPage"),
     source("index"),
     source("addPage"),
@@ -33,6 +47,7 @@ test("mounts three deliberate protected device routes", async () => {
     source("detailPage"),
     source("detailRoute"),
     source("detail"),
+    source("safety"),
     source("layout"),
   ]);
 
@@ -44,7 +59,10 @@ test("mounts three deliberate protected device routes", async () => {
   assert.match(detailPage, /deviceId/u);
   assert.match(detailRoute, /Gc2DeviceDetail/u);
   assert.match(detailRoute, /Gc2OfflineSyncRecovery/u);
+  assert.match(detailRoute, /Gc2HardwareSafetyLockout/u);
+  assert.match(detailRoute, /getHardwareSafetyLockout/u);
   assert.match(detail, /Gc2ProtectedShell/u);
+  assert.match(safety, /Gc2ProtectedShell/u);
   assert.match(layout, /DeviceMutationBoundary/u);
   assert.doesNotMatch(layout, /DevicesPairingExperience|ProtectedPairingStudio/u);
 });
@@ -125,16 +143,34 @@ test("keeps live device detail state-driven and trusted-mutation compatible", as
   assert.doesNotMatch(detail, /realtimeDatabase|firebaseFunctions|writeIrrigationCommandToFirebase/u);
 });
 
+test("keeps hardware incident detail fail-closed and read-only", async () => {
+  const safety = await source("safety");
+
+  for (const term of [
+    "Fail-closed safety lockout",
+    "What failed",
+    "Action prevented",
+    "Garden safety",
+    "Inspect next",
+  ]) {
+    assert.match(safety, new RegExp(term, "u"));
+  }
+
+  assert.match(safety, /refreshTelemetry\(device\.id\)/u);
+  assert.doesNotMatch(safety, /startIrrigation|updateDevice|removeDevice/u);
+});
+
 test("does not regress the new device surfaces to the old glass workspace", async () => {
-  const [index, pairing, waiting, detailRoute, detail] = await Promise.all([
+  const [index, pairing, waiting, detailRoute, detail, safety] = await Promise.all([
     source("index"),
     source("pairing"),
     source("waiting"),
     source("detailRoute"),
     source("detail"),
+    source("safety"),
   ]);
 
-  for (const sourceText of [index, pairing, waiting, detailRoute, detail]) {
+  for (const sourceText of [index, pairing, waiting, detailRoute, detail, safety]) {
     assert.doesNotMatch(
       sourceText,
       /GlassCard|SectionBadge|premium-btn|premium-tab|AmbientOrbs|LeafFallOverlay/u,
