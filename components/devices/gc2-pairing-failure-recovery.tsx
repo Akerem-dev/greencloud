@@ -308,10 +308,12 @@ export default function Gc2PairingFailureRecovery({
               No device is presented as trusted by this recovery screen. Physical output and workspace commands remain unchanged.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Gc2LinkButton href="/devices" variant="quiet">
-                <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-                Device inventory
-              </Gc2LinkButton>
+              {profile.action !== "inventory" ? (
+                <Gc2LinkButton href="/devices" variant="quiet">
+                  <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+                  Device inventory
+                </Gc2LinkButton>
+              ) : null}
               {primaryAction}
             </div>
           </div>
