@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import Gc2PairingApprovalWait from "@/components/devices/gc2-pairing-approval-wait";
 import Gc2ProtectedShell from "@/components/layout/gc2-protected-shell";
 import {
   useAppState,
@@ -25,7 +26,6 @@ import {
   Gc2SectionHeading,
   Gc2Surface,
 } from "@/components/ui/gc2-surface";
-
 
 type PairingStage =
   | "idle"
@@ -120,15 +120,6 @@ function stageStatus(stage: PairingStage): {
     };
   }
 
-  if (stage === "awaiting") {
-    return {
-      kicker: "Hardware confirmation",
-      title: "Waiting for ESP32 approval.",
-      detail: "Keep the controller powered on and approve the pending claim on the verified device flow.",
-      tone: "info",
-    };
-  }
-
   if (stage === "success") {
     return {
       kicker: "Ownership finalized",
@@ -174,7 +165,12 @@ function stageStatus(stage: PairingStage): {
 }
 
 export default function ProtectedPairingStudio() {
-  const { devices, pairDeviceByCode } = useAppState();
+  const {
+    devices,
+    pairDeviceByCode,
+    session,
+    settings,
+  } = useAppState();
   const [code, setCode] = useState("");
   const [name, setName] = useState(DEFAULT_NAME);
   const [place, setPlace] = useState(DEFAULT_PLACE);
@@ -184,13 +180,16 @@ export default function ProtectedPairingStudio() {
 
   const activeStep = stageIndex(stage);
   const status = stageStatus(stage);
-  const busy = stage === "requesting" || stage === "awaiting";
+  const busy = stage === "requesting";
+  const ownerLabel =
+    session.email || settings.ownerName || "Signed-in Firebase owner";
 
   const submitLabel = useMemo(() => {
     if (stage === "requesting") return "Creating secure request...";
-    if (stage === "awaiting") return "Waiting for ESP32...";
     if (stage === "success") return "Pair another device";
-    if (["rejected", "timeout", "error"].includes(stage)) return "Retry protected pairing";
+    if (["rejected", "timeout", "error"].includes(stage)) {
+      return "Retry protected pairing";
+    }
     return "Start protected pairing";
   }, [stage]);
 
@@ -212,7 +211,11 @@ export default function ProtectedPairingStudio() {
     }
 
     const safeCode = normalizeCode(code);
+    const safeName = name.trim() || DEFAULT_NAME;
+    const safePlace = place.trim() || DEFAULT_PLACE;
     setCode(safeCode);
+    setName(safeName);
+    setPlace(safePlace);
     setMessage("");
     setPairedDevice(null);
 
@@ -227,11 +230,7 @@ export default function ProtectedPairingStudio() {
     setStage("awaiting");
 
     try {
-      const paired = await pairDeviceByCode(
-        safeCode,
-        name.trim() || DEFAULT_NAME,
-        place.trim() || DEFAULT_PLACE,
-      );
+      const paired = await pairDeviceByCode(safeCode, safeName, safePlace);
 
       if (!paired) {
         setStage("error");
@@ -255,6 +254,32 @@ export default function ProtectedPairingStudio() {
 
       setMessage(error instanceof Error ? error.message : "Pairing failed safely.");
     }
+  }
+
+  if (stage === "awaiting") {
+    return (
+      <Gc2ProtectedShell>
+        <div className="gc2-stack">
+          <Gc2SectionHeading
+            kicker="Protected device claim"
+            title="Hardware approval is the final gate before ownership."
+            description="GreenCloud created the signed-in user's pending claim and is now observing the verified ESP32 decision."
+            actions={
+              <Gc2LinkButton href="/devices" variant="quiet">
+                <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+                Back to devices
+              </Gc2LinkButton>
+            }
+          />
+          <Gc2PairingApprovalWait
+            code={code}
+            deviceName={name}
+            place={place}
+            ownerLabel={ownerLabel}
+          />
+        </div>
+      </Gc2ProtectedShell>
+    );
   }
 
   return (
@@ -332,7 +357,7 @@ export default function ProtectedPairingStudio() {
                   icon={
                     stage === "success" ? (
                       <CheckCircle2 className="h-5 w-5" />
-                    ) : stage === "awaiting" || stage === "requesting" ? (
+                    ) : stage === "requesting" ? (
                       <LoaderCircle className="h-5 w-5 animate-spin" />
                     ) : (
                       <AlertTriangle className="h-5 w-5" />
