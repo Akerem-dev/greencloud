@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 
 import Gc2PairingApprovalWait from "@/components/devices/gc2-pairing-approval-wait";
+import Gc2PairingFailureRecovery from "@/components/devices/gc2-pairing-failure-recovery";
 import Gc2ProtectedShell from "@/components/layout/gc2-protected-shell";
 import {
   useAppState,
@@ -176,6 +176,7 @@ export default function ProtectedPairingStudio() {
   const [place, setPlace] = useState(DEFAULT_PLACE);
   const [stage, setStage] = useState<PairingStage>("idle");
   const [message, setMessage] = useState("");
+  const [failureCode, setFailureCode] = useState("");
   const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
 
   const activeStep = stageIndex(stage);
@@ -187,9 +188,6 @@ export default function ProtectedPairingStudio() {
   const submitLabel = useMemo(() => {
     if (stage === "requesting") return "Creating secure request...";
     if (stage === "success") return "Pair another device";
-    if (["rejected", "timeout", "error"].includes(stage)) {
-      return "Retry protected pairing";
-    }
     return "Start protected pairing";
   }, [stage]);
 
@@ -199,6 +197,22 @@ export default function ProtectedPairingStudio() {
     setPlace(DEFAULT_PLACE);
     setStage("idle");
     setMessage("");
+    setFailureCode("");
+    setPairedDevice(null);
+  }
+
+  function retrySameDetails() {
+    setStage("idle");
+    setMessage("");
+    setFailureCode("");
+    setPairedDevice(null);
+  }
+
+  function useFreshCode() {
+    setCode("");
+    setStage("idle");
+    setMessage("");
+    setFailureCode("");
     setPairedDevice(null);
   }
 
@@ -217,6 +231,7 @@ export default function ProtectedPairingStudio() {
     setName(safeName);
     setPlace(safePlace);
     setMessage("");
+    setFailureCode("");
     setPairedDevice(null);
 
     if (safeCode.length !== 6) {
@@ -233,6 +248,7 @@ export default function ProtectedPairingStudio() {
       const paired = await pairDeviceByCode(safeCode, safeName, safePlace);
 
       if (!paired) {
+        setFailureCode("invalid-response");
         setStage("error");
         setMessage("Pairing finished without a valid device result.");
         return;
@@ -243,6 +259,7 @@ export default function ProtectedPairingStudio() {
       setMessage(`${paired.name} is available in your protected workspace.`);
     } catch (error) {
       const codeValue = errorCode(error);
+      setFailureCode(codeValue || "pairing-error");
 
       if (codeValue.includes("rejected")) {
         setStage("rejected");
@@ -276,6 +293,37 @@ export default function ProtectedPairingStudio() {
             deviceName={name}
             place={place}
             ownerLabel={ownerLabel}
+          />
+        </div>
+      </Gc2ProtectedShell>
+    );
+  }
+
+  if (stage === "rejected" || stage === "timeout" || stage === "error") {
+    return (
+      <Gc2ProtectedShell>
+        <div className="gc2-stack">
+          <Gc2SectionHeading
+            kicker="Protected pairing recovery"
+            title="Pairing stopped before a trusted device result was confirmed."
+            description="GreenCloud keeps ownership and physical output closed while the failure is classified and the next safe action is selected."
+            actions={
+              <Gc2LinkButton href="/devices" variant="quiet">
+                <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+                Back to devices
+              </Gc2LinkButton>
+            }
+          />
+          <Gc2PairingFailureRecovery
+            stage={stage}
+            failureCode={failureCode}
+            message={message}
+            code={code}
+            deviceName={name}
+            place={place}
+            ownerLabel={ownerLabel}
+            onRetrySameDetails={retrySameDetails}
+            onUseFreshCode={useFreshCode}
           />
         </div>
       </Gc2ProtectedShell>
@@ -350,19 +398,11 @@ export default function ProtectedPairingStudio() {
                 />
               </div>
 
-              {message && stage !== "invalid" ? (
+              {message && stage === "success" ? (
                 <Gc2Notice
-                  tone={status.tone}
-                  title={stage === "success" ? "Pairing complete" : "Pairing status"}
-                  icon={
-                    stage === "success" ? (
-                      <CheckCircle2 className="h-5 w-5" />
-                    ) : stage === "requesting" ? (
-                      <LoaderCircle className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <AlertTriangle className="h-5 w-5" />
-                    )
-                  }
+                  tone="success"
+                  title="Pairing complete"
+                  icon={<CheckCircle2 className="h-5 w-5" />}
                 >
                   {message}
                 </Gc2Notice>
