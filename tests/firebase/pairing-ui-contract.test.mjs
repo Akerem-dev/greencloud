@@ -16,6 +16,13 @@ const studioSource = readFileSync(
   ),
   "utf8",
 );
+const waitingSource = readFileSync(
+  new URL(
+    "../../components/devices/gc2-pairing-approval-wait.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const routeSource = readFileSync(
   new URL("../../app/devices/add/page.tsx", import.meta.url),
   "utf8",
@@ -33,6 +40,7 @@ test("mounts the six-character approval flow on the dedicated add route", () => 
   assert.match(studioSource, /maxLength=\{6\}/);
   assert.match(studioSource, /safeCode\.length !== 6/);
   assert.match(studioSource, /Approve request on ESP32/);
-  assert.match(studioSource, /Waiting for ESP32\.\.\./);
-  assert.doesNotMatch(studioSource, /7-character/);
+  assert.match(studioSource, /Gc2PairingApprovalWait/);
+  assert.match(waitingSource, /Waiting for ESP32 approval/);
+  assert.doesNotMatch(`${studioSource}\n${waitingSource}`, /7-character/);
 });
