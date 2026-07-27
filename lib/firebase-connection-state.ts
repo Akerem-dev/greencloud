@@ -2,6 +2,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { goOnline, onValue, ref } from "firebase/database";
 
 import {
+  firebaseApp,
   firebaseAuth,
   firebaseRuntimeConfig,
   GREENCLOUD_ROOT,
@@ -39,7 +40,8 @@ function runtimeDetails() {
 
   return {
     runtimeLabel: "Configured Firebase project",
-    runtimeTarget: firebaseRuntimeConfig.projectId,
+    runtimeTarget:
+      firebaseApp.options.projectId || "Configured Firebase project",
   };
 }
 
