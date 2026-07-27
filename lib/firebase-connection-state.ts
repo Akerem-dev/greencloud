@@ -1,7 +1,10 @@
+import { onAuthStateChanged } from "firebase/auth";
 import { goOnline, onValue, ref } from "firebase/database";
 
 import {
+  firebaseAuth,
   firebaseRuntimeConfig,
+  GREENCLOUD_ROOT,
   realtimeDatabase,
 } from "@/lib/firebase";
 
@@ -20,9 +23,11 @@ export type GreenCloudConnectionSnapshot = {
   runtimeLabel: string;
   runtimeTarget: string;
   errorMessage: string;
+  lastSuccessfulSyncMs: number | null;
 };
 
 const CONNECTION_GRACE_MS = 4_000;
+const LAST_SYNC_STORAGE_KEY = "greencloud-last-successful-sync-ms";
 
 function runtimeDetails() {
   if (firebaseRuntimeConfig.useEmulators) {
@@ -44,6 +49,23 @@ function unavailableStatus(): GreenCloudSyncStatus {
     : "firebase-unavailable";
 }
 
+function readStoredLastSync() {
+  try {
+    const stored = Number(window.localStorage.getItem(LAST_SYNC_STORAGE_KEY));
+    return Number.isSafeInteger(stored) && stored > 0 ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredLastSync(value: number) {
+  try {
+    window.localStorage.setItem(LAST_SYNC_STORAGE_KEY, String(value));
+  } catch {
+    // Private mode or storage quotas can block this optional evidence cache.
+  }
+}
+
 export function subscribeToGreenCloudConnection(
   onChange: (snapshot: GreenCloudConnectionSnapshot) => void,
 ) {
@@ -56,7 +78,9 @@ export function subscribeToGreenCloudConnection(
   let firebaseConnected = false;
   let hasConnectedOnce = false;
   let errorMessage = "";
+  let lastSuccessfulSyncMs = readStoredLastSync();
   let graceTimer: ReturnType<typeof setTimeout> | null = null;
+  let workspaceUnsubscribe: (() => void) | null = null;
 
   function clearGraceTimer() {
     if (graceTimer !== null) {
@@ -65,14 +89,28 @@ export function subscribeToGreenCloudConnection(
     }
   }
 
-  function emit(status: GreenCloudSyncStatus) {
+  function currentStatus(): GreenCloudSyncStatus {
+    if (!browserOnline) return "browser-offline";
+    if (firebaseConnected) return "live";
+    return hasConnectedOnce ? "reconnecting" : "checking";
+  }
+
+  function emit(status: GreenCloudSyncStatus = currentStatus()) {
     onChange({
       status,
       browserOnline,
       firebaseConnected,
       errorMessage,
+      lastSuccessfulSyncMs,
       ...runtime,
     });
+  }
+
+  function recordSuccessfulSync() {
+    if (!browserOnline || !firebaseConnected) return;
+    lastSuccessfulSyncMs = Date.now();
+    writeStoredLastSync(lastSuccessfulSyncMs);
+    emit("live");
   }
 
   function scheduleUnavailable() {
@@ -104,7 +142,28 @@ export function subscribeToGreenCloudConnection(
   emit(browserOnline ? "checking" : "browser-offline");
   if (browserOnline) scheduleUnavailable();
 
-  const unsubscribe = onValue(
+  const authUnsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+    workspaceUnsubscribe?.();
+    workspaceUnsubscribe = null;
+
+    if (!user) {
+      emit();
+      return;
+    }
+
+    workspaceUnsubscribe = onValue(
+      ref(realtimeDatabase, `${GREENCLOUD_ROOT}/users/${user.uid}`),
+      () => {
+        recordSuccessfulSync();
+      },
+      (error) => {
+        errorMessage = error.message;
+        emit(browserOnline ? unavailableStatus() : "browser-offline");
+      },
+    );
+  });
+
+  const connectionUnsubscribe = onValue(
     ref(realtimeDatabase, ".info/connected"),
     (snapshot) => {
       firebaseConnected = snapshot.val() === true;
@@ -135,7 +194,9 @@ export function subscribeToGreenCloudConnection(
 
   return () => {
     clearGraceTimer();
-    unsubscribe();
+    workspaceUnsubscribe?.();
+    authUnsubscribe();
+    connectionUnsubscribe();
     window.removeEventListener("online", handleOnline);
     window.removeEventListener("offline", handleOffline);
   };
