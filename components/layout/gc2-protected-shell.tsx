@@ -17,6 +17,7 @@ import {
 import type { ReactNode } from "react";
 
 import AuthGate from "@/components/auth/auth-gate";
+import Gc2SignOutConfirmation from "@/components/auth/gc2-sign-out-confirmation";
 import { Gc2AppShell } from "@/components/layout/gc2-shells";
 import Gc2NotificationCenterDrawer from "@/components/notifications/gc2-notification-center-drawer";
 import { useAppState } from "@/components/providers/app-state-provider";
@@ -124,6 +125,7 @@ export default function Gc2ProtectedShell({ children }: { children: ReactNode })
         </Gc2AppShell>
 
         <Gc2NotificationCenterDrawer />
+        <Gc2SignOutConfirmation />
       </>
     </AuthGate>
   );
