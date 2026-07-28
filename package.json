@@ -29,6 +29,7 @@
     "test:automation-rule-editor": "node --test tests/overlays/automation-rule-editor-contract.test.mjs tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:delete-automation": "node --test tests/overlays/delete-automation-confirmation-contract.test.mjs tests/overlays/automation-rule-editor-contract.test.mjs tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:unsaved-changes": "node --test tests/overlays/unsaved-changes-warning-contract.test.mjs tests/overlays/automation-rule-editor-contract.test.mjs tests/overlays/delete-automation-confirmation-contract.test.mjs tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
+    "test:sign-out-confirmation": "node --test tests/overlays/sign-out-confirmation-contract.test.mjs tests/profile/profile-screen-contract.test.mjs tests/auth/auth-session-integrity.test.mjs tests/design/design-system-contract.test.mjs",
     "test:activity-screen": "node --test tests/activity/operations-timeline-ui-contract.test.mjs",
     "test:automation-screen": "node --test tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:analytics-screen": "node --test tests/analytics/analytics-screen-contract.test.mjs",
