@@ -114,7 +114,7 @@ test("calls protected AppState only after confirmation and keeps blocked request
   assert.match(safety, /AUTOMATION_COMMAND_BLOCKED_EVENT/u);
 });
 
-test("announces accepted requests for the read-only status panel", async () => {
+test("offers a deliberate handoff to the read-only status panel", async () => {
   const [modal, events] = await Promise.all([
     source("modal"),
     source("events"),
@@ -124,11 +124,16 @@ test("announces accepted requests for the read-only status panel", async () => {
   assert.match(modal, /previousCommandId = device\.lastCommand \?\? "None"/u);
   assert.match(
     modal,
-    /if \(commandBlockedRef\.current\) return;[\s\S]*window\.dispatchEvent\([\s\S]*IRRIGATION_COMMAND_SUBMITTED_EVENT/u,
+    /if \(commandBlockedRef\.current\) return;[\s\S]*setSubmittedRequest\(\{/u,
   );
-  assert.match(modal, /deviceId: device\.id/u);
-  assert.match(modal, /durationSeconds/u);
-  assert.match(modal, /previousCommandId/u);
+  assert.match(modal, /function openStatusPanel\(\)/u);
+  assert.match(modal, /if \(!submittedRequest\) return/u);
+  assert.match(
+    modal,
+    /setOpen\(false\);[\s\S]*window\.dispatchEvent\([\s\S]*IRRIGATION_COMMAND_SUBMITTED_EVENT/u,
+  );
+  assert.match(modal, /detail: submittedRequest/u);
+  assert.match(modal, /View command status/u);
   assert.match(modal, /setPhase\("submitted"\)/u);
 });
 
