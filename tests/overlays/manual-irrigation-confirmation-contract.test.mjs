@@ -20,6 +20,10 @@ const files = {
     import.meta.url,
   ),
   safety: new URL("../../lib/automation-safety.mjs", import.meta.url),
+  events: new URL(
+    "../../lib/irrigation-command-ui-events.mjs",
+    import.meta.url,
+  ),
 };
 
 async function source(name) {
@@ -104,11 +108,28 @@ test("calls protected AppState only after confirmation and keeps blocked request
   assert.match(modal, /setPhase\("confirm"\)/u);
   assert.match(modal, /setOpen\(true\)/u);
   assert.match(modal, /if \(commandBlockedRef\.current\) return/u);
-  assert.match(modal, /setPhase\("submitted"\)/u);
   assert.match(provider, /getManualIrrigationDecision/u);
   assert.match(provider, /emitBlockedAutomationCommand\(decision\.reason\)/u);
   assert.match(provider, /startBaseIrrigation\(commandTarget\.id\)/u);
   assert.match(safety, /AUTOMATION_COMMAND_BLOCKED_EVENT/u);
+});
+
+test("announces accepted requests for the read-only status panel", async () => {
+  const [modal, events] = await Promise.all([
+    source("modal"),
+    source("events"),
+  ]);
+
+  assert.match(events, /IRRIGATION_COMMAND_SUBMITTED_EVENT/u);
+  assert.match(modal, /previousCommandId = device\.lastCommand \?\? "None"/u);
+  assert.match(
+    modal,
+    /if \(commandBlockedRef\.current\) return;[\s\S]*window\.dispatchEvent\([\s\S]*IRRIGATION_COMMAND_SUBMITTED_EVENT/u,
+  );
+  assert.match(modal, /deviceId: device\.id/u);
+  assert.match(modal, /durationSeconds/u);
+  assert.match(modal, /previousCommandId/u);
+  assert.match(modal, /setPhase\("submitted"\)/u);
 });
 
 test("avoids fake hardware completion and direct mutation bypasses", async () => {
