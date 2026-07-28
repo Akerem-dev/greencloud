@@ -17,6 +17,11 @@ import { IRRIGATION_COMMAND_SUBMITTED_EVENT } from "@/lib/irrigation-command-ui-
 
 type IrrigationPhase = "confirm" | "submitted";
 type AutomationCommandEvent = CustomEvent<{ reason?: string }>;
+type SubmittedRequest = {
+  deviceId: string;
+  durationSeconds: number;
+  previousCommandId: string;
+};
 
 function buttonLabel(button: HTMLButtonElement) {
   return button.textContent?.trim().replace(/\s+/gu, " ") ?? "";
@@ -40,6 +45,8 @@ export default function Gc2ManualIrrigationConfirmation({
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<IrrigationPhase>("confirm");
   const [error, setError] = useState("");
+  const [submittedRequest, setSubmittedRequest] =
+    useState<SubmittedRequest | null>(null);
 
   useEffect(() => {
     const handleIrrigationCapture = (event: MouseEvent) => {
@@ -56,6 +63,7 @@ export default function Gc2ManualIrrigationConfirmation({
 
       commandBlockedRef.current = false;
       setError("");
+      setSubmittedRequest(null);
       setPhase("confirm");
       setOpen(true);
     };
@@ -73,6 +81,7 @@ export default function Gc2ManualIrrigationConfirmation({
         commandEvent.detail?.reason ??
           "The irrigation request was blocked by protected application state.",
       );
+      setSubmittedRequest(null);
       setPhase("confirm");
       setOpen(true);
     };
@@ -104,16 +113,23 @@ export default function Gc2ManualIrrigationConfirmation({
 
     if (commandBlockedRef.current) return;
 
+    setSubmittedRequest({
+      deviceId: device.id,
+      durationSeconds,
+      previousCommandId,
+    });
+    setPhase("submitted");
+  }
+
+  function openStatusPanel() {
+    if (!submittedRequest) return;
+
+    setOpen(false);
     window.dispatchEvent(
       new CustomEvent(IRRIGATION_COMMAND_SUBMITTED_EVENT, {
-        detail: {
-          deviceId: device.id,
-          durationSeconds,
-          previousCommandId,
-        },
+        detail: submittedRequest,
       }),
     );
-    setPhase("submitted");
   }
 
   if (!device) return null;
@@ -140,7 +156,14 @@ export default function Gc2ManualIrrigationConfirmation({
       }
       footer={
         phase === "submitted" ? (
-          <Gc2Button onClick={closeModal}>Done</Gc2Button>
+          <>
+            <Gc2Button variant="quiet" onClick={closeModal}>
+              Close
+            </Gc2Button>
+            <Gc2Button onClick={openStatusPanel}>
+              View command status
+            </Gc2Button>
+          </>
         ) : (
           <>
             <Gc2Button variant="quiet" onClick={closeModal}>
