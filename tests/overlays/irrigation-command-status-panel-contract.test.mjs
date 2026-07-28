@@ -39,7 +39,7 @@ test("mounts command status only after normal device detail boundaries", async (
   );
 });
 
-test("opens from an accepted confirmation without inventing command authority", async () => {
+test("opens through a deliberate accepted-request handoff", async () => {
   const [confirmation, events] = await Promise.all([
     source("confirmation"),
     source("events"),
@@ -50,11 +50,16 @@ test("opens from an accepted confirmation without inventing command authority", 
   assert.match(confirmation, /startIrrigation\(device\.id\)/u);
   assert.match(
     confirmation,
-    /if \(commandBlockedRef\.current\) return;[\s\S]*window\.dispatchEvent\([\s\S]*IRRIGATION_COMMAND_SUBMITTED_EVENT/u,
+    /if \(commandBlockedRef\.current\) return;[\s\S]*setSubmittedRequest\(\{/u,
   );
-  assert.match(confirmation, /deviceId: device\.id/u);
-  assert.match(confirmation, /durationSeconds/u);
-  assert.match(confirmation, /previousCommandId/u);
+  assert.match(confirmation, /function openStatusPanel\(\)/u);
+  assert.match(confirmation, /if \(!submittedRequest\) return/u);
+  assert.match(
+    confirmation,
+    /setOpen\(false\);[\s\S]*window\.dispatchEvent\([\s\S]*IRRIGATION_COMMAND_SUBMITTED_EVENT/u,
+  );
+  assert.match(confirmation, /detail: submittedRequest/u);
+  assert.match(confirmation, /View command status/u);
 });
 
 test("derives pending, running, handled, protected and blocked states from device evidence", async () => {
