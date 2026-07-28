@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, LogOut, ShieldCheck } from "lucide-react";
+import { CheckCircle2, LogOut, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAppState } from "@/components/providers/app-state-provider";
@@ -15,16 +15,13 @@ type BlockedSessionDetail = {
   reason?: string;
 };
 
-export default function Gc2SignOutConfirmation({
-  open,
-  onClose,
-  hasUnsavedProfileDraft,
-}: {
-  open: boolean;
-  onClose: () => void;
-  hasUnsavedProfileDraft: boolean;
-}) {
+function buttonLabel(button: HTMLButtonElement) {
+  return button.textContent?.trim().replace(/\s+/gu, " ") ?? "";
+}
+
+export default function Gc2SignOutConfirmation() {
   const { devices, logoutFromWorkspace, session, settings } = useAppState();
+  const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<SignOutPhase>("confirm");
   const [error, setError] = useState("");
 
@@ -34,7 +31,32 @@ export default function Gc2SignOutConfirmation({
   const accountEmail = session.email || "No authenticated email exposed";
 
   useEffect(() => {
+    const handleSignOutCapture = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) return;
+
+      const button = event.target.closest("button");
+      if (!(button instanceof HTMLButtonElement)) return;
+      if (buttonLabel(button) !== "Sign out") return;
+      if (button.closest("dialog")) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      setError("");
+      setPhase("confirm");
+      setOpen(true);
+    };
+
+    document.addEventListener("click", handleSignOutCapture, true);
+    return () =>
+      document.removeEventListener("click", handleSignOutCapture, true);
+  }, []);
+
+  useEffect(() => {
     const handleBlockedSession = (event: Event) => {
+      if (!open) return;
+
       const detail = (event as CustomEvent<BlockedSessionDetail>).detail;
       setError(
         detail?.reason ||
@@ -46,11 +68,11 @@ export default function Gc2SignOutConfirmation({
     window.addEventListener(AUTH_SESSION_BLOCKED_EVENT, handleBlockedSession);
     return () =>
       window.removeEventListener(AUTH_SESSION_BLOCKED_EVENT, handleBlockedSession);
-  }, []);
+  }, [open]);
 
   function closeModal() {
     if (pending) return;
-    onClose();
+    setOpen(false);
   }
 
   function confirmSignOut() {
@@ -146,17 +168,6 @@ export default function Gc2SignOutConfirmation({
               </dd>
             </div>
           </dl>
-
-          {hasUnsavedProfileDraft ? (
-            <Gc2Notice
-              tone="warning"
-              title="Unsaved profile-name draft"
-              icon={<AlertTriangle className="h-5 w-5" />}
-            >
-              The visible profile-name draft has not been saved. Signing out leaves the
-              authenticated account unchanged and discards only this local form draft.
-            </Gc2Notice>
-          ) : null}
 
           {phase === "failed" && error ? (
             <p
