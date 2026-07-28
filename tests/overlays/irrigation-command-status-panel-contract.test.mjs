@@ -105,7 +105,10 @@ test("uses a truthful drawer with refresh-only follow-up controls", async () => 
   assert.match(panel, /No estimated progress is fabricated/u);
   assert.match(panel, /does not publish a percentage or countdown/u);
   assert.match(panel, /only the latest command, pump, relay and telemetry evidence/u);
-  assert.doesNotMatch(panel, /setInterval|setTimeout|progressPercent|countdown/u);
+  assert.doesNotMatch(
+    panel,
+    /\bsetInterval\s*\(|\bsetTimeout\s*\(|\bprogressPercent\b|\bcountdown(?:Seconds|Ms|Value|Remaining|Timer)\b/u,
+  );
 });
 
 test("does not bypass AppState or write directly to command infrastructure", async () => {
