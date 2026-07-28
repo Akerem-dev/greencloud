@@ -24,7 +24,7 @@ type TrackingRequest = {
 
 type IrrigationSubmittedEvent = CustomEvent<TrackingRequest>;
 
-type PanelTone = "neutral" | "info" | "success" | "warning" | "danger";
+type PanelTone = "info" | "success" | "warning" | "danger";
 
 type PanelState = {
   title: string;
