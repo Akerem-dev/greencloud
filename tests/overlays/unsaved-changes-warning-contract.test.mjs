@@ -58,7 +58,7 @@ test("keeps the exact draft or discards it without saving", async () => {
   assert.match(editor, /Keep editing/u);
   assert.match(editor, /Discard changes/u);
   assert.match(editor, /Keep editing returns to the exact draft values you entered/u);
-  assert.match(editor, /without calling onSave or updateAutomation/u);
+  assert.match(editor, /closes the editor without saving or applying the draft/u);
   assert.match(launcher, /onClose=\{\(\) => setOpen\(false\)\}/u);
 
   const discardFunction = editor.match(
