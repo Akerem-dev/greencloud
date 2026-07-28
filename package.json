@@ -28,6 +28,7 @@
     "test:trusted-unpair": "node --test tests/overlays/trusted-unpair-confirmation-contract.test.mjs tests/devices/trusted-device-unpair-ui.test.mjs tests/devices/device-mutation-safety.test.mjs tests/devices/device-screens-contract.test.mjs",
     "test:automation-rule-editor": "node --test tests/overlays/automation-rule-editor-contract.test.mjs tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:delete-automation": "node --test tests/overlays/delete-automation-confirmation-contract.test.mjs tests/overlays/automation-rule-editor-contract.test.mjs tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
+    "test:unsaved-changes": "node --test tests/overlays/unsaved-changes-warning-contract.test.mjs tests/overlays/automation-rule-editor-contract.test.mjs tests/overlays/delete-automation-confirmation-contract.test.mjs tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:activity-screen": "node --test tests/activity/operations-timeline-ui-contract.test.mjs",
     "test:automation-screen": "node --test tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:analytics-screen": "node --test tests/analytics/analytics-screen-contract.test.mjs",
