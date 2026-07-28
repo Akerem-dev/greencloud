@@ -13,6 +13,7 @@ import { Gc2Button } from "@/components/ui/gc2-button";
 import { Gc2Dialog } from "@/components/ui/gc2-dialog";
 import { Gc2Notice, Gc2Status } from "@/components/ui/gc2-status";
 import { AUTOMATION_COMMAND_BLOCKED_EVENT } from "@/lib/automation-safety.mjs";
+import { IRRIGATION_COMMAND_SUBMITTED_EVENT } from "@/lib/irrigation-command-ui-events.mjs";
 
 type IrrigationPhase = "confirm" | "submitted";
 type AutomationCommandEvent = CustomEvent<{ reason?: string }>;
@@ -95,12 +96,23 @@ export default function Gc2ManualIrrigationConfirmation({
   function confirmIrrigation() {
     if (!device) return;
 
+    const previousCommandId = device.lastCommand ?? "None";
+
     commandBlockedRef.current = false;
     setError("");
     startIrrigation(device.id);
 
     if (commandBlockedRef.current) return;
 
+    window.dispatchEvent(
+      new CustomEvent(IRRIGATION_COMMAND_SUBMITTED_EVENT, {
+        detail: {
+          deviceId: device.id,
+          durationSeconds,
+          previousCommandId,
+        },
+      }),
+    );
     setPhase("submitted");
   }
 
