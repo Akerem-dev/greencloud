@@ -98,7 +98,7 @@ test("states immutable identity and avoids fake sync or unrelated controls", asy
   const modal = await source("modal");
 
   assert.match(modal, /Controller identity, ownership and safety state remain immutable/u);
-  assert.match(modal, /Remote persistence remains managed by the existing Firebase adapter/u);
+  assert.match(modal, /Remote persistence remains managed by the\s+existing Firebase adapter/u);
   assert.match(modal, /Device ID \{device\.id\}/u);
   assert.match(modal, /pairing trust, telemetry[\s\S]*hardware protection were not changed/u);
   assert.doesNotMatch(
