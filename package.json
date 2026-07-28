@@ -23,6 +23,7 @@
     "test:notification-drawer": "node --test tests/overlays/notification-center-drawer-contract.test.mjs tests/design/design-system-contract.test.mjs",
     "test:command-palette": "node --test tests/overlays/global-command-palette-contract.test.mjs tests/overlays/notification-center-drawer-contract.test.mjs tests/dashboard/workspace-pulse-ui-contract.test.mjs",
     "test:rename-device": "node --test tests/overlays/rename-device-modal-contract.test.mjs tests/devices/device-mutation-safety.test.mjs tests/devices/device-screens-contract.test.mjs",
+    "test:irrigation-confirmation": "node --test tests/overlays/manual-irrigation-confirmation-contract.test.mjs tests/automation/automation-safety-contract.test.mjs tests/devices/device-screens-contract.test.mjs",
     "test:activity-screen": "node --test tests/activity/operations-timeline-ui-contract.test.mjs",
     "test:automation-screen": "node --test tests/automation/automation-screen-contract.test.mjs tests/automation/automation-safety-contract.test.mjs",
     "test:analytics-screen": "node --test tests/analytics/analytics-screen-contract.test.mjs",
