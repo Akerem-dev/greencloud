@@ -271,7 +271,7 @@ export default function Gc2AutomationRuleEditor({
 
           <p className="m-0 text-xs leading-5 text-[var(--gc2-ink-muted)]">
             Keep editing returns to the exact draft values you entered. Discard changes
-            closes the editor without calling onSave or updateAutomation.
+            closes the editor without saving or applying the draft.
           </p>
         </div>
       ) : (
