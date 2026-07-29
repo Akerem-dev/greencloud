@@ -62,7 +62,7 @@ test("runs every primary screen and supporting overlay contract", async () => {
   const runner = await source("runner");
 
   for (const script of [...screenScripts, ...overlayScripts]) {
-    assert.match(runner, new RegExp(`\\[\\\"[^\\\"]+\\\", \\\"${script}\\\"\\]`, "u"));
+    assert.match(runner, new RegExp(`\\[\\"[^\\"]+\\", \\"${script}\\"\\]`, "u"));
   }
 
   assert.match(runner, /test:auth-session/u);
@@ -74,12 +74,15 @@ test("runs every primary screen and supporting overlay contract", async () => {
   assert.match(runner, /stopped immediately/u);
 });
 
-test("keeps the final gate serialized, local and fail-closed", async () => {
+test("keeps the final gate serialized, local, portable and fail-closed", async () => {
   const runner = await source("runner");
 
   assert.match(runner, /for \(const \[label, script\] of checkpoints\)/u);
+  assert.match(runner, /const npmExecPath = process\.env\.npm_execpath/u);
+  assert.match(runner, /spawnSync\(process\.execPath, \[npmExecPath, "run", script\]/u);
   assert.match(runner, /result\.status !== 0/u);
   assert.match(runner, /Manual visual review is still required/u);
+  assert.doesNotMatch(runner, /npm\.cmd/u);
   assert.doesNotMatch(
     runner,
     /git\s+(?:merge|push)|firebase\s+deploy|vercel\s+deploy|gh\s+pr\s+merge/u,
