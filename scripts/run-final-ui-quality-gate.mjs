@@ -34,8 +34,14 @@ const checkpoints = [
   ["Final UI quality-gate contract", "test:final-ui-contract"],
 ];
 
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const npmExecPath = process.env.npm_execpath;
 const startedAt = Date.now();
+
+if (!npmExecPath) {
+  console.error("FAILED: npm_execpath is unavailable.");
+  console.error("Run this quality gate through `npm run test:final-ui`.");
+  process.exit(1);
+}
 
 console.log("\n=== GREENCLOUD FINAL UI QUALITY GATE ===");
 console.log(`Running ${checkpoints.length} serialized checkpoints.`);
@@ -45,7 +51,7 @@ for (const [label, script] of checkpoints) {
   console.log(`\n=== ${label.toUpperCase()} ===`);
   console.log(`npm run ${script}`);
 
-  const result = spawnSync(npmCommand, ["run", script], {
+  const result = spawnSync(process.execPath, [npmExecPath, "run", script], {
     cwd: process.cwd(),
     env: process.env,
     stdio: "inherit",
