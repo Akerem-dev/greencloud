@@ -62,7 +62,7 @@ test("runs every primary screen and supporting overlay contract", async () => {
   const runner = await source("runner");
 
   for (const script of [...screenScripts, ...overlayScripts]) {
-    assert.match(runner, new RegExp(`\\[\\"[^\\"]+\\", \\"${script}\\"\\]`, "u"));
+    assert.match(runner, new RegExp(`\\["[^"]+", "${script}"\\]`, "u"));
   }
 
   assert.match(runner, /test:auth-session/u);
