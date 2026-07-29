@@ -27,6 +27,14 @@ const shellSource = readFileSync(
   "utf8",
 );
 
+const notificationDrawerSource = readFileSync(
+  new URL(
+    "../../components/notifications/gc2-notification-center-drawer.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 test("keeps the Dashboard layout free of injected portals and duplicate decks", () => {
   assert.match(layoutSource, /return children/);
   assert.doesNotMatch(layoutSource, /WorkspacePulsePortal/);
@@ -56,14 +64,17 @@ test("projects state-driven workspace context into both dashboard states", () =>
 test("uses the shared protected shell and keeps actions inside AppState", () => {
   assert.match(shellSource, /Gc2AppShell/);
   assert.match(shellSource, /AuthGate/);
-  assert.match(shellSource, /href="\/activity"/);
+  assert.match(shellSource, /Gc2NotificationCenterDrawer/);
+  assert.match(shellSource, /onClick=\{openNotifications\}/);
+  assert.match(shellSource, /href:\s*"\/activity"/);
   assert.match(shellSource, /href="\/profile"/);
+  assert.match(notificationDrawerSource, /href="\/activity"/);
   assert.match(dashboardSource, /href="\/devices"/);
   assert.match(dashboardSource, /href="\/activity"/);
   assert.match(emptySource, /href="\/devices\/add"/);
   assert.match(emptySource, /href="\/settings"/);
   assert.doesNotMatch(
-    `${dashboardSource}\n${emptySource}`,
+    `${dashboardSource}\n${emptySource}\n${notificationDrawerSource}`,
     /firebaseAuth|httpsCallable|realtimeDatabase|firebaseFunctions/,
   );
 });
